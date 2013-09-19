@@ -12,31 +12,33 @@ print("Corbit v3")
 config = json.loads(open("../res/OCESS.json").read())
 data = config["entities"][0]
 
-displacement = m/1 * array(data["displacement"])
-print(displacement)
-velocity = m/s * array(data["velocity"])
-print(velocity)
-acceleration = m/s/s * array(data["acceleration"])
-print(acceleration)
+entities = []
 
-name = data["name"]
-print(name)
-mass = kg/1 * data["mass"]
-print(mass)
-radius = m * data["radius"]
-print(radius)
+for entity in config["entities"]:
+    displacement = m/1 * array(entity["displacement"])
+    #print(displacement)
+    velocity = m/s * array(entity["velocity"])
+    #print(velocity)
+    acceleration = m/s/s * array(entity["acceleration"])
+    #print(acceleration)
+    
+    name = entity["name"]
+    print(name)
+    mass = kg/1 * entity["mass"]
+    #print(mass)
+    radius = m * entity["radius"]
+    #print(radius)
+    
+    angular_displacement = rad/1 * entity["angular_displacement"]
+    #print(angular_displacement)
+    angular_velocity = rad/s * entity["angular_velocity"]
+    #print(angular_velocity)
+    angular_acceleration = rad/s/s * entity["angular_acceleration"]
+    #print(angular_acceleration)
+    
+    entities.append(Entity(displacement, velocity, acceleration,
+                 name, mass, radius,
+                 angular_displacement, angular_velocity, angular_acceleration))
 
-angular_displacement = rad/1 * data["angular_displacement"]
-print(angular_displacement)
-angular_velocity = rad/s * data["angular_velocity"]
-print(angular_velocity)
-angular_acceleration = rad/s/s * data["angular_acceleration"]
-print(angular_acceleration)
 
 
-sun = Entity(displacement, velocity, acceleration,
-             name, mass, radius,
-             angular_displacement, angular_velocity, angular_acceleration)
-
-
-print (sun)
