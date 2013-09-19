@@ -1,0 +1,50 @@
+{
+    "entities": [
+        {
+            "displacement": [
+                0,
+                1
+            ],
+            "velocity": [
+                10,
+                11
+            ],
+            "acceleration": [
+                20,
+                21
+            ],
+            
+            "name": "sun",
+            "mass": 10,
+            "radius": 11,
+            
+            "angular_displacement": 21,
+            "angular_velocity": 22,
+            "angular_acceleration": 23
+            
+        },
+        {
+            "displacement": [
+                0,
+                1
+            ],
+            "velocity": [
+                10,
+                11
+            ],
+            "acceleration": [
+                20,
+                21
+            ],
+            
+            "name": "earth",
+            "mass": 10,
+            "radius": 11,
+            
+            "angular_displacement": 21,
+            "angular_velocity": 22,
+            "angular_acceleration": 23
+            
+        }
+    ]
+}
