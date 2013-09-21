@@ -5,6 +5,16 @@ from scipy import array
 import json
 from unum.units import *
 import sys, pygame
+from pygame.locals import *
+
+pygame.init()
+fps_clock = pygame.time.Clock()
+
+
+window_surface_obj = pygame.display.set_mode(pygame.display.list_modes()[0],
+                                             pygame.FULLSCREEN)
+
+pygame.display.set_caption("Corbit " + __version__)
 
 print("Corbit " + __version__)
 
@@ -40,30 +50,3 @@ for entity in config["entities"]:
     entities.append(Entity(displacement, velocity, acceleration,
                  name, mass, radius,
                  angular_displacement, angular_velocity, angular_acceleration))
-
-pygame.init()
-
-size = width, height = 320, 240
-speed = [2, 2]
-black = 0, 0, 0
-
-print(width)
-print(height)
-
-screen = pygame.display.set_mode(size)
-
-ball = pygame.image.load("ball.bmp")
-ballrect = ball.get_rect()
-
-while 1:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT: sys.exit()
-
-    ballrect = ballrect.move(speed)
-    if ballrect.left < 0 or ballrect.right > width:
-        speed[0] = -speed[0]
-    if ballrect.top < 0 or ballrect.bottom > height:
-        speed[1] = -speed[1]
-
-    screen.fill(black)
-    pygame.display.flip()
