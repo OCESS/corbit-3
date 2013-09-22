@@ -6,15 +6,14 @@ import json
 from unum.units import *
 import sys, pygame
 from pygame.locals import *
+from socket import *
+import pickle
 
-pygame.init()
-fps_clock = pygame.time.Clock()
 
+HOST = 'localhost'                 # Symbolic name meaning all available interfaces
+PORT = 31415              # Arbitrary non-privileged port
+sock = socket(AF_INET, SOCK_STREAM)
 
-window_surface_obj = pygame.display.set_mode(pygame.display.list_modes()[0],
-                                             pygame.FULLSCREEN)
-
-pygame.display.set_caption("Corbit " + __version__)
 
 print("Corbit " + __version__)
 
@@ -22,7 +21,7 @@ print("Corbit " + __version__)
 entities = []
 
 #load the default JSON file, and construct all included
-config = json.loads(open("../res/OCESS.json").read())
+config = json.loads(open("res/OCESS.json").read())
 data = config["entities"][0]
 
 for entity in config["entities"]:
@@ -50,3 +49,20 @@ for entity in config["entities"]:
     entities.append(Entity(displacement, velocity, acceleration,
                  name, mass, radius,
                  angular_displacement, angular_velocity, angular_acceleration))
+
+
+sock.bind((HOST, PORT))
+sock.listen(1)
+
+conn, addr = sock.accept()
+print('Connected by', addr)
+
+while True:
+    data = conn.recv(1024)
+    if not data: break
+    
+    sunb = pickle.dumps(entities[0])
+    sunn = pickle.loads(sunb)
+    
+    conn.sendall(sunb)
+conn.close()
