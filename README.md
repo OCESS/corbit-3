@@ -1,7 +1,7 @@
-corbit-3
+Corbit
 ========
 
-This is a spaceflight simulator, programmed in Python. It is the third major version of Corbit.
+This is a spaceflight simulator, programmed in Python. This specific repo is the third major version of Corbit
 
 
 Requirements
