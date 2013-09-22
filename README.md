@@ -7,4 +7,4 @@ This is a spaceflight simulator, programmed in Python. It is the third major ver
 Requirements
 ------------
 
-Corbit uses the SciPy stack, unum, and the Python standard library.
+Corbit uses the SciPy stack, unum, PyGame and the Python standard library.
