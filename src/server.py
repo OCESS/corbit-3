@@ -4,15 +4,12 @@ from entity import Entity
 from scipy import array
 import json
 from unum.units import *
-import sys, pygame
-from pygame.locals import *
 from socket import *
 import pickle
 
 
-HOST = 'localhost'                 # Symbolic name meaning all available interfaces
+HOST = ''                 # Symbolic name meaning all available interfaces
 PORT = 31415              # Arbitrary non-privileged port
-sock = socket(AF_INET, SOCK_STREAM)
 
 
 print("Corbit " + __version__)
@@ -21,7 +18,7 @@ print("Corbit " + __version__)
 entities = []
 
 #load the default JSON file, and construct all included
-config = json.loads(open("res/OCESS.json").read())
+config = json.loads(open("../res/OCESS.json").read())
 data = config["entities"][0]
 
 for entity in config["entities"]:
@@ -50,19 +47,14 @@ for entity in config["entities"]:
                  name, mass, radius,
                  angular_displacement, angular_velocity, angular_acceleration))
 
-
-sock.bind((HOST, PORT))
-sock.listen(1)
-
-conn, addr = sock.accept()
-print('Connected by', addr)
-
 while True:
-    data = conn.recv(1024)
-    if not data: break
+    sock = socket(AF_INET, SOCK_STREAM)
+    sock.bind((HOST, PORT))
+    sock.listen(1)
+    conn, addr = sock.accept()
+    print('Connected by', addr)
     
-    sunb = pickle.dumps(entities[0])
-    sunn = pickle.loads(sunb)
-    
-    conn.sendall(sunb)
-conn.close()
+    sunb = pickle.dumps(entities)
+    conn.sendall(sunb)    
+            
+    conn.close()
