@@ -12,21 +12,22 @@ import time
 import sys
 import Pyro4
 
+print("Corbit SERVER " + __version__)
+
+Pyro4.config.SERIALIZER = "pickle"
+Pyro4.config.SERIALIZERS_ACCEPTED.clear()
+Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
 
 HOST = "localhost"  # IP address to bind to
 PORT = 31415        # Arbitrary port I picked
 
-entities = []
-
-class Server:
-    "Class for storing server's data, shared by Pyro"
+class Telemetry:
+    "Class that transfers data between server and other programs"
     def entities(self):
         return entities
 
-server = Server()
-
-
-print("Corbit " + __version__)
+telem = Telemetry()
+entities = []
 
 #load the default JSON file, and construct all included
 config = json.loads(open("../res/OCESS.json").read())
@@ -41,7 +42,7 @@ for entity in config["entities"]:
     #print(acceleration)
     
     name = entity["name"]
-    print(name)
+    #print(name)
     mass = kg/1 * entity["mass"]
     #print(mass)
     radius = m * entity["radius"]
@@ -58,25 +59,24 @@ for entity in config["entities"]:
                  name, mass, radius,
                  angular_displacement, angular_velocity, angular_acceleration))
 
-daemon = Pyro4.Daemon(HOST, PORT)
-uri = daemon.register(server, "server")
-print("uri =", uri)
 
-
-daemon.requestLoop()
+daemon = Pyro4.Daemon("localhost", 31415)
+daemon.register(telem, "telem")
 
 
 def exit_handler():
     daemon.close()
 
-atexit.register(exit_handler())
+atexit.register(exit_handler)
 
 def simulate_tick():
-    for entity in server.entities:
+    for entity in telem.entities:
         entity.move(s/tps)
 
 def receive_input():
     None
+
+daemon.requestLoop()
 
 """
 while True:
