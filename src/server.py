@@ -11,18 +11,17 @@ import threading
 import time
 import sys
 import Pyro4
+from telemetry import Telemetry
+
+Pyro4.SERIALIZER = pickle
 
 
 HOST = "localhost"  # IP address to bind to
 PORT = 31415        # Arbitrary port I picked
 
-class Server:
-    "Class for storing server's data, shared by Pyro"
-    def fps(self):
-        return 60.
-    entities = []
+telem = Telemetry()
 
-server = Server()
+telem.fps = 60.
 
 
 print("Corbit " + __version__)
@@ -53,15 +52,14 @@ for entity in config["entities"]:
     angular_acceleration = rad/s/s * entity["angular_acceleration"]
     #print(angular_acceleration)
     
-    server.entities.append(Entity(displacement, velocity, acceleration,
+    telem.entities.append(Entity(displacement, velocity, acceleration,
                  name, mass, radius,
                  angular_displacement, angular_velocity, angular_acceleration))
 
-daemon = Pyro4.Daemon(HOST, PORT)
-uri = daemon.register(Server(), "server")
-print("uri =", uri)
-
-
+daemon = Pyro4.Daemon("localhost", 31415)
+telem = Telemetry()
+uri = daemon.register(telem, "telem")
+print("uri=",uri)
 daemon.requestLoop()
 
 
@@ -71,7 +69,7 @@ def exit_handler():
 atexit.register(exit_handler())
 
 def simulate_tick():
-    for entity in server.entities:
+    for entity in telem.entities:
         entity.move(s/tps)
 
 def receive_input():
