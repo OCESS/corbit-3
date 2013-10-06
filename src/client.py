@@ -7,21 +7,19 @@ from entity import *
 from unum.units import *
 import Pyro4
 
-class version_mismatch(Exception):
-    def __init__(self, value):
-        self.value = "My version: " + value
-    def __str__(self):
-        return repr(self.value)
 
-
-uri = "PYRO:entities@localhost:31415"   # Where to find the server's data
+uri = "PYRO:server@localhost:31415"   # Where to find the server's data
 
 print("Corbit " + __version__)
 
 
 server = Pyro4.Proxy(uri)
 
-print(server.fps())
+print(server)
+
+entities = []
+
+entities = server.entities()
 
 pygame.init()
 clock = pygame.time.Clock()

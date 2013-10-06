@@ -16,11 +16,12 @@ import Pyro4
 HOST = "localhost"  # IP address to bind to
 PORT = 31415        # Arbitrary port I picked
 
+entities = []
+
 class Server:
     "Class for storing server's data, shared by Pyro"
-    def fps(self):
-        return 60.
-    entities = []
+    def entities(self):
+        return entities
 
 server = Server()
 
@@ -53,12 +54,12 @@ for entity in config["entities"]:
     angular_acceleration = rad/s/s * entity["angular_acceleration"]
     #print(angular_acceleration)
     
-    server.entities.append(Entity(displacement, velocity, acceleration,
+    entities.append(Entity(displacement, velocity, acceleration,
                  name, mass, radius,
                  angular_displacement, angular_velocity, angular_acceleration))
 
 daemon = Pyro4.Daemon(HOST, PORT)
-uri = daemon.register(Server(), "server")
+uri = daemon.register(server, "server")
 print("uri =", uri)
 
 
