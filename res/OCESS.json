@@ -15,7 +15,7 @@
             ],
             
             "name": "sun",
-            "mass": 10,
+            "mass": 1000000000,
             "radius": 11,
             
             "angular_displacement": 21,

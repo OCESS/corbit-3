@@ -38,3 +38,8 @@ class Entity:
         self.angular_velocity += self.angular_acceleration * time
         self.angular_acceleration = 0 * rad/s/s
         self.angular_displacement += self.angular_velocity * time
+
+
+
+def gravity():
+    None
