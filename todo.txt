@@ -1,0 +1,12 @@
+Physics
+-collision detection
+-gravitation
+
+GUI
+-HUD
+-Vcen, Vtan, etc. calculation
+
+Features
+-saving
+-time acceleration
+-advance camera
