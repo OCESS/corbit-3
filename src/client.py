@@ -1,10 +1,7 @@
 __version__ = "3.0.0"
 import sys, pygame
-from pygame.locals import *
-from socket import *
-import pickle
 from entity import *
-from unum.units import *
+from unum.units import s
 import Pyro4
 
 print("Corbit PILOT " + __version__)
@@ -14,17 +11,25 @@ Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.SERIALIZERS_ACCEPTED.clear()
 Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
 uri = "PYRO:telem@localhost:31415"   # Where to find the telemetry data
-
 entities = []
 telem = Pyro4.Proxy(uri)
-entities = telem.entities()
 
 pygame.init()
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((640,480))
 pygame.display.set_caption("Corbit " + __version__)
 
-print("let's roll")
+
+connected = False
+while connected == False:
+    print("connecting")
+    try:
+        entities = telem.entities()
+        connected = True
+    except Pyro4.errors.CommunicationError:
+        print("connection failed")
+        connected = False
+
 while True:
     
     clock.tick(fps)
@@ -33,10 +38,10 @@ while True:
         if event.type == pygame.QUIT:
             sys.exit()
     
-    entities = telem.entities()    
+    entities = telem.entities()
     
     for entity in entities:
-        pygame.draw.circle(screen, (255,0,0),
+        pygame.draw.circle(screen, entity.color,
                            entity.displacement.asNumber().astype(int),
                            entity.radius.asNumber())
 
