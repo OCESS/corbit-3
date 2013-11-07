@@ -1,5 +1,5 @@
 from unum.units import rad,m,s,kg
-import json
+import collections
 
 class Entity:
     "Base class for all physical objects"
@@ -54,20 +54,22 @@ class Entity:
     def dict_repr(self):
         "Returns a dictionary representation of the Entity"
         
-        blob = {}
+        blob = collections.OrderedDict([
         
-        blob["name"] = self.name
-        blob["color"] = self.color  
-        blob["mass"] = self.mass.asNumber()
-        blob["radius"] = self.radius.asNumber()
+        ("name", self.name),
+        ("color", self.color),  
+        ("mass", self.mass.asNumber()),
+        ("radius", self.radius.asNumber()),
         
-        blob["displacement"] = self.displacement.asNumber().tolist()
-        blob["velocity"] = self.velocity.asNumber().tolist()
-        blob["acceleration"] = self.acceleration.asNumber().tolist()
+        ("displacement", self.displacement.asNumber().tolist()),
+        ("velocity", self.velocity.asNumber().tolist()),
+        ("acceleration", self.acceleration.asNumber().tolist()),
         
-        blob["angular_displacement"] = self.angular_displacement.asNumber()
-        blob["angular_velocity"] = self.angular_velocity.asNumber()
-        blob["angular_acceleration"] = self.angular_acceleration.asNumber()
+        ("angular_displacement", self.angular_displacement.asNumber()),
+        ("angular_velocity", self.angular_velocity.asNumber()),
+        ("angular_acceleration", self.angular_acceleration.asNumber())
+        
+        ])
         
         return blob
         

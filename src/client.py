@@ -1,6 +1,6 @@
 __version__ = "3.0.0"
 import sys, pygame
-from entity import *
+from entity import Entity
 from unum.units import s
 import Pyro4
 
@@ -11,7 +11,6 @@ Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.SERIALIZERS_ACCEPTED.clear()
 Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
 uri = "PYRO:telem@localhost:31415"   # Where to find the telemetry data
-entities = []
 telem = Pyro4.Proxy(uri)
 
 pygame.init()
@@ -19,6 +18,10 @@ clock = pygame.time.Clock()
 screen = pygame.display.set_mode((640,480))
 pygame.display.set_caption("Corbit " + __version__)
 
+telem.save("../res/client.json")
+telem.load("../res/client.json")
+
+entities = []
 
 connected = False
 while connected == False:
@@ -29,6 +32,7 @@ while connected == False:
     except Pyro4.errors.CommunicationError:
         print("connection failed")
         connected = False
+
 
 while True:
     

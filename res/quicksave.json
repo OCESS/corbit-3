@@ -1,0 +1,54 @@
+{
+    "entities": [
+        {
+            "name": "sun",
+            "color": [
+                255,
+                255,
+                0
+            ],
+            "mass": 1000000000000000.0,
+            "radius": 11,
+            "displacement": [
+                300,
+                300
+            ],
+            "velocity": [
+                0.0,
+                0.0
+            ],
+            "acceleration": [
+                20.0,
+                20.0
+            ],
+            "angular_displacement": 21.0,
+            "angular_velocity": 22.0,
+            "angular_acceleration": 23.0
+        },
+        {
+            "name": "earth",
+            "color": [
+                0,
+                255,
+                0
+            ],
+            "mass": 10,
+            "radius": 11,
+            "displacement": [
+                100,
+                100
+            ],
+            "velocity": [
+                -1.0,
+                -1.0
+            ],
+            "acceleration": [
+                20.0,
+                20.0
+            ],
+            "angular_displacement": 21.0,
+            "angular_velocity": 22.0,
+            "angular_acceleration": 23.0
+        }
+    ]
+}
