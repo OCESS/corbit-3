@@ -14,6 +14,8 @@ import Pyro4
 print("Corbit SERVER " + __version__)
 tps = 60
 
+entity_lock = threading.Lock
+
 Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.SERIALIZERS_ACCEPTED.clear()
 Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
@@ -101,6 +103,9 @@ telem.save("../res/quicksave.json")
 
 
 def simulate_tick():
+    
+    entity_lock.acquire()
+    
     for entity in entities:
         entity.move(s/tps)
     
@@ -109,6 +114,8 @@ def simulate_tick():
         theta = angle(A, B)
         A.accelerate(gravity, theta)
         B.accelerate(-gravity, theta)
+    
+    entity_lock.release()
 
 
 daemon = Pyro4.Daemon("localhost", 31415)
@@ -124,8 +131,8 @@ server_thread.start()
 
 
 while True:
-    simulate_tick()
     time.sleep(1/tps)
+    threading.Thread(target = simulate_tick).start()
 
 
 print("okay")
