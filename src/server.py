@@ -14,7 +14,7 @@ import Pyro4
 print("Corbit SERVER " + __version__)
 tps = 60
 
-entity_lock = threading.Lock
+entity_lock = threading.Lock()
 
 Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.SERIALIZERS_ACCEPTED.clear()
