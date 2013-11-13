@@ -1,27 +1,27 @@
 {
     "entities": [
         {
-        	"name": "sun",
+        	"name": "AC A",
         	"color": [
         		255,
         		255,
         		0
         	],
             "displacement": [
-                300,
-                300
+                650,
+                350
             ],
             "velocity": [
                 0,
-                0
+                -5
             ],
             "acceleration": [
-                20,
-                20
+                0,
+                0
             ],
             
-            "mass": 1e15,
-            "radius": 11,
+            "mass": 2e15,
+            "radius": 13,
             
             "angular_displacement": 21,
             "angular_velocity": 22,
@@ -29,26 +29,54 @@
             
         },
         {
-        	"name": "earth",
+        	"name": "AC",
+        	"color": [
+        		255,
+        		0,
+        		0
+        	],
+            "displacement": [
+                463,
+                350
+            ],
+            "velocity": [
+                -10,
+                -8
+            ],
+            "acceleration": [
+                0,
+                0
+            ],
+            
+            "mass": 2e3,
+            "radius": 8,
+            
+            "angular_displacement": 21,
+            "angular_velocity": 22,
+            "angular_acceleration": 23
+            
+        },
+        {
+        	"name": "AC B",
         	"color": [
         		0,
         		255,
         		0
         	],
             "displacement": [
-                100,
-                100
+                300,
+                350
             ],
             "velocity": [
-                -1,
-                -1
+                0,
+                15
             ],
             "acceleration": [
-                20,
-                20
+                0,
+                0
             ],
             
-            "mass": 10,
+            "mass": 1.5e15,
             "radius": 11,
             
             "angular_displacement": 21,

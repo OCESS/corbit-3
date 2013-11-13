@@ -1,50 +1,75 @@
 {
     "entities": [
         {
-            "name": "sun",
+            "name": "AC A",
             "color": [
                 255,
                 255,
                 0
             ],
-            "mass": 1000000000000000.0,
-            "radius": 11,
+            "mass": 2000000000000000.0,
+            "radius": 13,
             "displacement": [
-                300,
-                300
+                650,
+                350
             ],
             "velocity": [
                 0.0,
-                0.0
+                -5.0
             ],
             "acceleration": [
-                20.0,
-                20.0
+                0.0,
+                0.0
             ],
             "angular_displacement": 21.0,
             "angular_velocity": 22.0,
             "angular_acceleration": 23.0
         },
         {
-            "name": "earth",
+            "name": "AC",
+            "color": [
+                255,
+                0,
+                0
+            ],
+            "mass": 2000.0,
+            "radius": 8,
+            "displacement": [
+                463,
+                350
+            ],
+            "velocity": [
+                -10.0,
+                -8.0
+            ],
+            "acceleration": [
+                0.0,
+                0.0
+            ],
+            "angular_displacement": 21.0,
+            "angular_velocity": 22.0,
+            "angular_acceleration": 23.0
+        },
+        {
+            "name": "AC B",
             "color": [
                 0,
                 255,
                 0
             ],
-            "mass": 10,
+            "mass": 1500000000000000.0,
             "radius": 11,
             "displacement": [
-                100,
-                100
+                300,
+                350
             ],
             "velocity": [
-                -1.0,
-                -1.0
+                0.0,
+                15.0
             ],
             "acceleration": [
-                20.0,
-                20.0
+                0.0,
+                0.0
             ],
             "angular_displacement": 21.0,
             "angular_velocity": 22.0,

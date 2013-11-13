@@ -22,7 +22,6 @@ Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
 HOST = "localhost"  # IP address to bind to
 PORT = 31415        # Arbitrary port I picked
 
-
 G = 6.6720E-11 * N*m**2/kg**2
 
 
@@ -107,10 +106,11 @@ def simulate_tick():
     entity_lock.acquire()
     
     for entity in entities:
-        entity.move(s/tps)
+        entity.move(5*s/tps)
     
     for A, B in itertools.combinations(entities, 2):
         gravity = gravitational_force(A, B)
+        #print(gravity)
         theta = angle(A, B)
         A.accelerate(gravity, theta)
         B.accelerate(-gravity, theta)
