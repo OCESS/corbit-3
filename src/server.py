@@ -99,6 +99,7 @@ entities = []
 
 telem.load("../res/OCESS.json")
 telem.save("../res/quicksave.json")
+telem.load("../res/quicksave.json")
 
 
 def simulate_tick():

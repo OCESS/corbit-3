@@ -32,12 +32,12 @@ class Camera:
 Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.SERIALIZERS_ACCEPTED.clear()
 Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
-uri = "PYRO:telem@localhost:31415"   # Where to find the telemetry data
+uri = "PYRO:telem@localhost:31415"  # Where to find the telemetry data
 telem = Pyro4.Proxy(uri)
 
 pygame.init()
 clock = pygame.time.Clock()
-screen = pygame.display.set_mode((screen_size[0],screen_size[1]))
+screen = pygame.display.set_mode((screen_size[0], screen_size[1]))
 pygame.display.set_caption("Corbit " + __version__)
 
 entities = []
@@ -84,4 +84,4 @@ while True:
                            int(entity.radius.asNumber() * camera.zoom))
 
     pygame.display.update()
-    screen.fill((0,0,0))
+    screen.fill((0, 0, 0))
