@@ -107,9 +107,7 @@ while True:
             if event.unicode == "-":
                 camera.zoom(-0.1)
             if event.unicode == "+":
-                print(camera.zoom_level)
                 camera.zoom(0.1)
-                print(camera.zoom_level)
             
     
     entities = telem.entities()
