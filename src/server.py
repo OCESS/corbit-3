@@ -3,7 +3,7 @@ __version__ = "3.0.0"
 from entity import Entity
 from scipy import array, linalg
 import json
-from unum.units import N,m,s,kg,rad
+from unum.units import N,m,s,kg,rad,Hz
 import atexit
 import threading
 import time
@@ -12,7 +12,7 @@ import math
 import Pyro4
 
 print("Corbit SERVER " + __version__)
-tps = 60
+tps = 60 * Hz
 
 entity_lock = threading.Lock()
 
@@ -20,7 +20,7 @@ Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.SERIALIZERS_ACCEPTED.clear()
 Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
 HOST = "localhost"  # IP address to bind to
-PORT = 31415        # Arbitrary port I picked
+PORT = 59722        # Arbitrary port I picked
 
 G = 6.6720E-11 * N*m**2/kg**2
 
@@ -107,11 +107,10 @@ def simulate_tick():
     entity_lock.acquire()
     
     for entity in entities:
-        entity.move(5*s/tps)
+        entity.move(1/tps)
     
     for A, B in itertools.combinations(entities, 2):
         gravity = gravitational_force(A, B)
-        #print(gravity)
         theta = angle(A, B)
         A.accelerate(gravity, theta)
         B.accelerate(-gravity, theta)
@@ -119,7 +118,7 @@ def simulate_tick():
     entity_lock.release()
 
 
-daemon = Pyro4.Daemon("localhost", 31415)
+daemon = Pyro4.Daemon("localhost", 59722)
 daemon.register(telem, "telem")
 
 def exit_handler():
@@ -132,7 +131,7 @@ server_thread.start()
 
 
 while True:
-    time.sleep(1/tps)
+    time.sleep(1/tps.asNumber())
     threading.Thread(target = simulate_tick).start()
 
 

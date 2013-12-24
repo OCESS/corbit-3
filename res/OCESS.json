@@ -8,12 +8,12 @@
         		0
         	],
             "displacement": [
-                650,
+                350,
                 350
             ],
             "velocity": [
                 0,
-                -5
+                0
             ],
             "acceleration": [
                 0,
@@ -40,8 +40,8 @@
                 350
             ],
             "velocity": [
-                -10,
-                -8
+                0,
+                -30
             ],
             "acceleration": [
                 0,
@@ -50,34 +50,6 @@
             
             "mass": 2e3,
             "radius": 8,
-            
-            "angular_displacement": 21,
-            "angular_velocity": 22,
-            "angular_acceleration": 23
-            
-        },
-        {
-        	"name": "AC B",
-        	"color": [
-        		0,
-        		255,
-        		0
-        	],
-            "displacement": [
-                300,
-                350
-            ],
-            "velocity": [
-                0,
-                15
-            ],
-            "acceleration": [
-                0,
-                0
-            ],
-            
-            "mass": 1.5e15,
-            "radius": 11,
             
             "angular_displacement": 21,
             "angular_velocity": 22,
