@@ -1,6 +1,6 @@
 __version__ = "3.0.0"
 
-from entity import Entity
+from entity import Entity,Habitat
 from scipy import array, linalg
 import json
 from unum.units import N,m,s,kg,rad,Hz
@@ -20,7 +20,7 @@ Pyro4.config.SERIALIZER = "pickle"
 Pyro4.config.SERIALIZERS_ACCEPTED.clear()
 Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
 HOST = "localhost"  # IP address to bind to
-PORT = 59722        # Arbitrary port I picked
+PORT = 3141        # Arbitrary port I picked
 
 G = 6.6720E-11 * N*m**2/kg**2
 
@@ -49,28 +49,68 @@ def save(output_stream):
 def load(input_stream):
     "Loads a list of entities when provided with a JSON "
     json_root = json.load(input_stream)
-    data = json_root["entities"]
-    
     json_entities = []
     
-    for entity in data:    
-        name = entity["name"]
-        color = entity["color"]
-        mass = kg * entity["mass"]
-        radius = m * entity["radius"]
-        
-        displacement = m * array(entity["displacement"])
-        velocity = m/s * array(entity["velocity"])
-        acceleration = m/s/s * array(entity["acceleration"])
-        
-        angular_displacement = rad * entity["angular_displacement"]
-        angular_velocity = rad/s * entity["angular_velocity"]
-        angular_acceleration = rad/s/s * entity["angular_acceleration"]
+    try:
+        data = json_root["entities"]
+    except KeyError:
+        print("no entities found")
+    for entity in data:
+        try:
+            name = entity["name"]
+        except:
+            print("unnamed entity found, skipping")
+            break
+        try:
+            color = entity["color"]
+            mass = kg * entity["mass"]
+            radius = m * entity["radius"]
+            
+            displacement = m * array(entity["displacement"])
+            velocity = m/s * array(entity["velocity"])
+            acceleration = m/s/s * array(entity["acceleration"])
+            
+            angular_displacement = rad * entity["angular_displacement"]
+            angular_velocity = rad/s * entity["angular_velocity"]
+            angular_acceleration = rad/s/s * entity["angular_acceleration"]
+        except KeyError:
+            print("entity " + name + " has undefined elements, skipping...")
+            break
         
         json_entities.append(Entity(name, color, mass, radius,
                                     displacement, velocity, acceleration,
                                     angular_displacement, angular_velocity,
                                     angular_acceleration))
+    
+    data = json_root["habitats"]
+    for habitat in data:
+        try:
+            name = habitat["name"]
+        except KeyError:
+            print("unnamed habitat found, skipping")
+            break
+        try:
+            color = habitat["color"]
+            mass = kg * habitat["mass"]
+            radius = m * habitat["radius"]
+            
+            displacement = m * array(habitat["displacement"])
+            velocity = m/s * array(habitat["velocity"])
+            acceleration = m/s/s * array(habitat["acceleration"])
+            
+            angular_displacement = rad * habitat["angular_displacement"]
+            angular_velocity = rad/s * habitat["angular_velocity"]
+            angular_acceleration = rad/s/s * habitat["angular_acceleration"]
+        
+            fuel = kg * habitat["fuel"]
+        except KeyError:
+            print("habitat " + name + " has undefined elements, skipping...")
+            break
+        json_entities.append(Habitat(name, color, mass, radius,
+                                    displacement, velocity, acceleration,
+                                    angular_displacement, angular_velocity,
+                                    angular_acceleration,
+                                    fuel))
     
     global entities
     entities = json_entities
@@ -83,11 +123,23 @@ class Telemetry:
         "Wrapper for accessing entities, callable on a client machine"
         return entities
     
+    def entity(self, name):
+        "Accesses the first entity specified by name"
+        for entity in entities:
+            if entity.name == name:
+                return entity
+    
+    def accelerate(self, name, force, angle):
+        "Wrapper for accelerating entities, callable on a client machine"
+        for entity in entities:
+            if entity.name == name:
+                entity.accelerate(force, angle)
+        
     def save(self, filepath):
         "Wrapper for save(), callable on a client machine"
         with open(filepath, "w") as savefile:
             save(savefile)
-            
+             
     def load(self, filepath):
         "Wrapper for load(), callable on a client machine"
         with open(filepath, "r") as loadfile:
@@ -95,17 +147,14 @@ class Telemetry:
         
 
 telem = Telemetry()
-entities = []
+
 
 telem.load("../res/OCESS.json")
-telem.save("../res/quicksave.json")
-telem.load("../res/quicksave.json")
-
 
 def simulate_tick():
     
     entity_lock.acquire()
-    
+
     for entity in entities:
         entity.move(1/tps)
     
@@ -118,7 +167,7 @@ def simulate_tick():
     entity_lock.release()
 
 
-daemon = Pyro4.Daemon("localhost", 59722)
+daemon = Pyro4.Daemon(HOST, PORT)
 daemon.register(telem, "telem")
 
 def exit_handler():

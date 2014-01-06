@@ -1,50 +1,29 @@
 __version__ = "3.0.0"
-import sys
-import pygame
-from pygame.locals import *
-from unum.units import m,s,Hz
-from scipy import array
-import Pyro4
+from entity import Entity,Habitat   # Corbit modules
+from camera import Camera           # more Corbit modules
+import sys      # used to exit the program
+import pygame   # used for drawing and a couple other things
+from pygame.locals import *     # so I don't have to type out KB_LEFT, etc
+from unum.units import m,s,Hz,N # physical units that are used
+from scipy import array         # scipy.array is what I represent a vector
+                                # quantity with, e.g. velocity, displacement
+from math import sin,cos
+import Pyro4                    # used to communicate with the server
 
 print("Corbit PILOT " + __version__)
 fps = 60 * Hz
 
 
-class Camera:
-    
-    def __init__(self, displacement, velocity, acceleration, zoom_level):
-        self.displacement = displacement
-        self.velocity = velocity
-        self.acceleration = acceleration
-        self.zoom_level = zoom_level
-    
-    def pan(self, amount):
-        "Pan the camera by a vector amount"
-        self.acceleration += amount
-    
-    def move(self, time):
-        "Called every tick, keeps the camera moving"
-        self.velocity += self.acceleration * time
-        self.acceleration = 0 * m/s/s
-        self.displacement += self.velocity * time
-    
-    def zoom(self, amount):
-        "Zooms the camera in and out. Call this instead of modifying zoom_level"
-        if amount < 0:
-            self.zoom_level /= 1 - amount
-        else:
-            self.zoom_level *= 1 + amount
-    
-    locked = True
-    speed = 100
-
-
-Pyro4.config.SERIALIZER = "pickle"
+Pyro4.config.SERIALIZER = "pickle"  # I chose pickle because I'm only going to
+                                    # be running this on secure, isolated
+                                    # networks
 Pyro4.config.SERIALIZERS_ACCEPTED.clear()
-Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
-uri = "PYRO:telem@localhost:59722"  # Where to find the telemetry data
-telem = Pyro4.Proxy(uri)
+Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle") # I'll only be using pickle
+uri = "PYRO:telem@localhost:3141"   # Where to find the telemetry data
+telem = Pyro4.Proxy(uri)            # this object will be used to communicate
+                                    # with the server
 
+# just setting up the display and window here
 screen_size = (681, 745)
 pygame.init()
 clock = pygame.time.Clock()
@@ -54,7 +33,7 @@ pygame.display.set_caption("Corbit " + __version__)
 
 pygame.key.set_repeat(True)
 
-entities = []
+entities = []       # list of all entities loaded in the program
 
 def find_entity(name):
     for entity in entities:
@@ -65,22 +44,15 @@ connected = False
 while connected == False:
     print("connecting")
     try:
-        entities = telem.entities()
+        entities = telem.entities
         connected = True
     except Pyro4.errors.CommunicationError:
         print("connection failed")
         connected = False
 
-telem.save("../res/client.json")
-telem.load("../res/client.json")
-telem.load("../res/OCESS.json")
+camera = Camera(1)
 
-center = entities[0]
-def update_camera():
-    camera.displacement = center.displacement
-    camera.velocity = center.velocity
-    camera.acceleration = center.acceleration
-camera = Camera(center.displacement, center.velocity, center.acceleration, 1)
+telem.load("../res/OCESS.json") # gets the server to load the default save
 
 while True:
     
@@ -96,37 +68,64 @@ while True:
         if pygame.key.get_focused() and event.type == KEYDOWN:
             if event.key == K_LEFT:
                 camera.pan(m/s/s * array((-camera.speed, 0)))
-            if event.key == K_RIGHT:
+            elif event.key == K_RIGHT:
                 camera.pan(m/s/s * array((camera.speed, 0)))
-            if event.key == K_UP:
+            elif event.key == K_UP:
                 camera.pan(m/s/s * array((0, -camera.speed)))
-            if event.key == K_DOWN:
+            elif event.key == K_DOWN:
                 camera.pan(m/s/s * array((0, camera.speed)))
-            if event.unicode == "\t":
+            elif event.unicode == "q":
+                print("accelerate!")
+                telem.accelerate("AC", N * array([0,1e5]), 0)
+            elif event.unicode == "\t":
                 camera.locked = not camera.locked
-            if event.unicode == "-":
+            elif event.unicode == "-":
                 camera.zoom(-0.1)
-            if event.unicode == "+":
+            elif event.unicode == "+":
                 camera.zoom(0.1)
             
-    
-    entities = telem.entities()
-    if camera.locked:
-        update_camera()
+    entities = telem.entities()    
+    camera.update()
     camera.move(1/fps)
     
-    
+    ## Drawing routines here 
     for entity in entities:
-        pygame.draw.circle(screen, entity.color,
-         [int(
-          camera.zoom_level *
-          (entity.displacement - camera.displacement).asNumber()[0]
-          + screen_size[0]/2),
-         int(
-          camera.zoom_level *
-          (entity.displacement - camera.displacement).asNumber()[1]
-          + screen_size[1]/2)],
-         int(entity.radius.asNumber() * camera.zoom_level))
+        # calculating the on-screen position
+        screen_position = \
+         [
+          int(
+           camera.zoom_level *
+           (entity.displacement - camera.displacement).asNumber()[0]
+           + screen_size[0]/2),
+          int(
+           camera.zoom_level *
+           (entity.displacement - camera.displacement).asNumber()[1]
+           + screen_size[1]/2)
+         ]
+        # calculating the on-screen radius
+        screen_radius = int(entity.radius.asNumber() * camera.zoom_level)
+         
+        if type(entity) == Entity:
+            # entity drawing is the simplest, just a circle
+            pygame.draw.circle(screen, entity.color,
+                               screen_position, screen_radius)
+        elif type(entity) == Habitat:
+            # habitat is the entity drawing, but with a line pointing forwards
+            pygame.draw.circle(screen, entity.color,
+                               screen_position, screen_radius)
+            pygame.draw.line(screen, (0,255,0), screen_position,
+             [
+              int(
+               screen_position[0] +
+               screen_radius * cos(entity.angular_displacement)
+              ),
+              int(
+               screen_position[1] +
+               screen_radius * sin(entity.angular_displacement)
+              )
+             ]
+            )
+
 
     pygame.display.update()
     screen.fill((0, 0, 0))

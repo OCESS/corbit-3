@@ -1,15 +1,15 @@
 {
     "entities": [
         {
-        	"name": "AC A",
-        	"color": [
-        		255,
-        		255,
-        		0
-        	],
+            "name": "AC A",
+            "color": [
+                255,
+                255,
+                0
+            ],
             "displacement": [
-                350,
-                350
+                -175,
+                -175
             ],
             "velocity": [
                 0,
@@ -19,25 +19,24 @@
                 0,
                 0
             ],
-            
             "mass": 2e15,
             "radius": 13,
-            
             "angular_displacement": 21,
             "angular_velocity": 22,
             "angular_acceleration": 23
-            
-        },
+        }
+    ],
+    "habitats": [
         {
-        	"name": "AC",
-        	"color": [
-        		255,
-        		0,
-        		0
-        	],
+            "name": "AC",
+            "color": [
+                255,
+                0,
+                0
+            ],
             "displacement": [
-                463,
-                350
+                -232,
+                -175
             ],
             "velocity": [
                 0,
@@ -47,14 +46,12 @@
                 0,
                 0
             ],
-            
-            "mass": 2e3,
+            "mass": 2000,
             "radius": 8,
-            
-            "angular_displacement": 21,
-            "angular_velocity": 22,
-            "angular_acceleration": 23
-            
+            "angular_displacement": 0,
+            "angular_velocity": 0,
+            "angular_acceleration": 0,
+            "fuel": 100
         }
     ]
 }
