@@ -7,7 +7,7 @@ from pygame.locals import *     # so I don't have to type out KB_LEFT, etc
 from unum.units import m,s,Hz,N # physical units that are used
 from scipy import array         # scipy.array is what I represent a vector
                                 # quantity with, e.g. velocity, displacement
-from math import sin,cos
+from math import sin,cos,pi
 import Pyro4                    # used to communicate with the server
 
 print("Corbit PILOT " + __version__)
@@ -30,24 +30,16 @@ clock = pygame.time.Clock()
 display_flags = RESIZABLE
 screen = pygame.display.set_mode(screen_size, display_flags)
 pygame.display.set_caption("Corbit " + __version__)
-
 pygame.key.set_repeat(True)
 
-entities = []       # list of all entities loaded in the program
-
-def find_entity(name):
-    for entity in entities:
-        if entity.name == name:
-            return entity
 
 connected = False
+print("connecting")
 while connected == False:
-    print("connecting")
     try:
-        entities = telem.entities
+        print("Found objects:\n",telem.entities())
         connected = True
     except Pyro4.errors.CommunicationError:
-        print("connection failed")
         connected = False
 
 camera = Camera(1)
@@ -75,8 +67,18 @@ while True:
             elif event.key == K_DOWN:
                 camera.pan(m/s/s * array((0, camera.speed)))
             elif event.unicode == "q":
-                print("accelerate!")
-                telem.accelerate("AC", N * array([0,1e5]), 0)
+                telem.accelerate("AC", N * array([0,-1e3]), pi)
+                telem.accelerate("AC", N * array([0,1e3]), 0)
+            elif event.unicode == "e":
+                telem.accelerate("AC", N * array([0,1e3]), pi)
+                telem.accelerate("AC", N * array([0,-1e3]), 0)
+            elif event.unicode == "w":
+                telem.accelerate("AC", N * array([0,1e3]), 3*pi/2 + 0.5)
+                telem.accelerate("AC", N * array([0,1e3]), 3*pi/2 - 0.5)
+            elif event.unicode == "+":
+                telem.change_engines("AC", 0.01)
+            elif event.unicode == "-":
+                telem.change_engines("AC", -0.01)
             elif event.unicode == "\t":
                 camera.locked = not camera.locked
             elif event.unicode == "-":
@@ -84,12 +86,11 @@ while True:
             elif event.unicode == "+":
                 camera.zoom(0.1)
             
-    entities = telem.entities()    
     camera.update()
     camera.move(1/fps)
     
     ## Drawing routines here 
-    for entity in entities:
+    for entity in telem.entities():
         # calculating the on-screen position
         screen_position = \
          [
@@ -117,11 +118,11 @@ while True:
              [
               int(
                screen_position[0] +
-               screen_radius * cos(entity.angular_displacement)
+               screen_radius * cos(entity.angular_position)
               ),
               int(
                screen_position[1] +
-               screen_radius * sin(entity.angular_displacement)
+               screen_radius * sin(entity.angular_position)
               )
              ]
             )

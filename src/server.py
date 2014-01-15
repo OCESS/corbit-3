@@ -70,16 +70,17 @@ def load(input_stream):
             velocity = m/s * array(entity["velocity"])
             acceleration = m/s/s * array(entity["acceleration"])
             
-            angular_displacement = rad * entity["angular_displacement"]
-            angular_velocity = rad/s * entity["angular_velocity"]
+            angular_position = rad * entity["angular_position"]
+            angular_speed = rad/s * entity["angular_speed"]
             angular_acceleration = rad/s/s * entity["angular_acceleration"]
+            
         except KeyError:
             print("entity " + name + " has undefined elements, skipping...")
             break
         
         json_entities.append(Entity(name, color, mass, radius,
                                     displacement, velocity, acceleration,
-                                    angular_displacement, angular_velocity,
+                                    angular_position, angular_speed,
                                     angular_acceleration))
     
     data = json_root["habitats"]
@@ -98,17 +99,18 @@ def load(input_stream):
             velocity = m/s * array(habitat["velocity"])
             acceleration = m/s/s * array(habitat["acceleration"])
             
-            angular_displacement = rad * habitat["angular_displacement"]
-            angular_velocity = rad/s * habitat["angular_velocity"]
+            angular_position = rad * habitat["angular_position"]
+            angular_speed = rad/s * habitat["angular_speed"]
             angular_acceleration = rad/s/s * habitat["angular_acceleration"]
         
             fuel = kg * habitat["fuel"]
+            
         except KeyError:
             print("habitat " + name + " has undefined elements, skipping...")
             break
         json_entities.append(Habitat(name, color, mass, radius,
                                     displacement, velocity, acceleration,
-                                    angular_displacement, angular_velocity,
+                                    angular_position, angular_speed,
                                     angular_acceleration,
                                     fuel))
     
@@ -134,6 +136,12 @@ class Telemetry:
         for entity in entities:
             if entity.name == name:
                 entity.accelerate(force, angle)
+    
+    def change_engines(self, name, increment):
+        "Changes the engine usage of the specified entity. Fails if no engines"
+        for entity in entities:
+            if entity.name == name:
+                entity.engine_usage += increment
         
     def save(self, filepath):
         "Wrapper for save(), callable on a client machine"
@@ -158,11 +166,11 @@ def simulate_tick():
     for entity in entities:
         entity.move(1/tps)
     
-    for A, B in itertools.combinations(entities, 2):
-        gravity = gravitational_force(A, B)
-        theta = angle(A, B)
-        A.accelerate(gravity, theta)
-        B.accelerate(-gravity, theta)
+    #for A, B in itertools.combinations(entities, 2):
+    #    gravity = gravitational_force(A, B)
+    #    theta = angle(A, B)
+    #    A.accelerate(gravity, theta)
+    #    B.accelerate(-gravity, theta)
     
     entity_lock.release()
 

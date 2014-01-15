@@ -8,8 +8,8 @@
                 0
             ],
             "displacement": [
-                -175,
-                -175
+                -75,
+                -75
             ],
             "velocity": [
                 0,
@@ -21,8 +21,8 @@
             ],
             "mass": 2e15,
             "radius": 13,
-            "angular_displacement": 21,
-            "angular_velocity": 22,
+            "angular_position": 21,
+            "angular_speed": 22,
             "angular_acceleration": 23
         }
     ],
@@ -35,12 +35,12 @@
                 0
             ],
             "displacement": [
-                -232,
-                -175
+                -132,
+                -75
             ],
             "velocity": [
                 0,
-                -30
+                0
             ],
             "acceleration": [
                 0,
@@ -48,8 +48,8 @@
             ],
             "mass": 2000,
             "radius": 8,
-            "angular_displacement": 0,
-            "angular_velocity": 0,
+            "angular_position": 0,
+            "angular_speed": 0,
             "angular_acceleration": 0,
             "fuel": 100
         }
