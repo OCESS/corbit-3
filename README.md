@@ -22,5 +22,5 @@ Project Structure
 `src/`			this directory contains all the source files  
 `- server.py`		running this will start a headless server that is running Corbit, which loads OCESS.json by default  
 `- client.py`		running this will connect to a running instance of server.py, on the local machine. Then, it will tell the server to reload the default OCESS.json file  
-`- entity.py`		contains the class definitions for any physical objects. Entity is the base object, Habitat is derived from Entity
+`- entity.py`		contains the class definitions for any physical objects. Entity is the base object, Habitat is derived from Entity  
 `- camera.py`		contains the calss definitions for the camera object, used by client.py to move the camera around
