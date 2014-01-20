@@ -13,7 +13,7 @@
             ],
             "velocity": [
                 0,
-                0
+                5
             ],
             "acceleration": [
                 0,
@@ -51,7 +51,8 @@
             "angular_position": 0,
             "angular_speed": 0,
             "angular_acceleration": 0,
-            "fuel": 100
+            "fuel": 10000,
+            "rcs_fuel": 500
         }
     ]
 }

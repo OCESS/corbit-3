@@ -30,7 +30,7 @@ clock = pygame.time.Clock()
 display_flags = RESIZABLE
 screen = pygame.display.set_mode(screen_size, display_flags)
 pygame.display.set_caption("Corbit " + __version__)
-pygame.key.set_repeat(True)
+pygame.key.set_repeat(800,25)
 
 
 connected = False
@@ -42,7 +42,7 @@ while connected == False:
     except Pyro4.errors.CommunicationError:
         connected = False
 
-camera = Camera(1)
+camera = Camera(20, telem.entity("AC"))
 
 telem.load("../res/OCESS.json") # gets the server to load the default save
 
@@ -58,36 +58,43 @@ while True:
             screen = pygame.display.set_mode(screen_size, display_flags)
             print(screen_size)
         if pygame.key.get_focused() and event.type == KEYDOWN:
-            if event.key == K_LEFT:
-                camera.pan(m/s/s * array((-camera.speed, 0)))
+            if event.unicode == "\t":
+                camera.locked = not camera.locked
+                print("locked=",camera.locked)
+            elif event.key == K_LEFT:
+                camera.pan(m/s/s * array((-1, 0)))
             elif event.key == K_RIGHT:
-                camera.pan(m/s/s * array((camera.speed, 0)))
+                camera.pan(m/s/s * array((1, 0)))
             elif event.key == K_UP:
                 camera.pan(m/s/s * array((0, -camera.speed)))
             elif event.key == K_DOWN:
                 camera.pan(m/s/s * array((0, camera.speed)))
-            elif event.unicode == "q":
-                telem.accelerate("AC", N * array([0,-1e3]), pi)
-                telem.accelerate("AC", N * array([0,1e3]), 0)
-            elif event.unicode == "e":
-                telem.accelerate("AC", N * array([0,1e3]), pi)
-                telem.accelerate("AC", N * array([0,-1e3]), 0)
+            
+            elif event.unicode == "a":
+                telem.fire_vernier_thrusters("AC", -1)
+            elif event.unicode == "d":
+                telem.fire_vernier_thrusters("AC", 1)
             elif event.unicode == "w":
-                telem.accelerate("AC", N * array([0,1e3]), 3*pi/2 + 0.5)
-                telem.accelerate("AC", N * array([0,1e3]), 3*pi/2 - 0.5)
-            elif event.unicode == "+":
-                telem.change_engines("AC", 0.01)
-            elif event.unicode == "-":
-                telem.change_engines("AC", -0.01)
-            elif event.unicode == "\t":
-                camera.locked = not camera.locked
+                telem.change_main_engines("AC", 0.01)
+            elif event.unicode == "s":
+                telem.change_main_engines("AC", -0.01)
+            
+            elif event.unicode == "W":
+                telem.fire_rcs_thrusters("AC", 0)
+            elif event.unicode == "A":
+                telem.fire_rcs_thrusters("AC", pi/2)
+            elif event.unicode == "S":
+                telem.fire_rcs_thrusters("AC", pi)
+            elif event.unicode == "D":
+                telem.fire_rcs_thrusters("AC", -pi/2)
+                
             elif event.unicode == "-":
                 camera.zoom(-0.1)
             elif event.unicode == "+":
                 camera.zoom(0.1)
             
-    camera.update()
     camera.move(1/fps)
+    camera.update()
     
     ## Drawing routines here 
     for entity in telem.entities():
@@ -114,7 +121,7 @@ while True:
             # habitat is the entity drawing, but with a line pointing forwards
             pygame.draw.circle(screen, entity.color,
                                screen_position, screen_radius)
-            pygame.draw.line(screen, (0,255,0), screen_position,
+            pygame.draw.aaline(screen, (0,255,0), screen_position,
              [
               int(
                screen_position[0] +
@@ -127,6 +134,6 @@ while True:
              ]
             )
 
-
-    pygame.display.update()
+    screen.blit(pygame.transform.flip(screen, False, True), (0,0))
+    pygame.display.flip()
     screen.fill((0, 0, 0))

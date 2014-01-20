@@ -19,6 +19,9 @@ class Camera:
             self.acceleration = center.acceleration
         
         self.zoom_level = zoom_level
+    
+    locked = True
+    speed = 1e2
 
     def update(self):
         "Updates the camera's position to match that of the center"
@@ -29,7 +32,7 @@ class Camera:
     
     def pan(self, amount):
         "Pan the camera by a vector amount"
-        self.acceleration += amount
+        self.acceleration += amount * self.speed
     
     def move(self, time):
         "Called every tick, keeps the camera moving"
@@ -43,6 +46,3 @@ class Camera:
             self.zoom_level /= 1 - amount
         else:
             self.zoom_level *= 1 + amount
-    
-    locked = True
-    speed = 1

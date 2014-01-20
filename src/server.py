@@ -8,7 +8,7 @@ import atexit
 import threading
 import time
 import itertools
-import math
+from math import sin,cos,atan2,pi
 import Pyro4
 
 print("Corbit SERVER " + __version__)
@@ -29,11 +29,11 @@ def distance(A, B):
     return m * linalg.norm(A.displacement.asNumber() - B.displacement.asNumber())
 
 def angle(A, B):
-    return math.atan2((B.displacement[1] - A.displacement[1]).asNumber(),
+    return atan2((B.displacement[1] - A.displacement[1]).asNumber(),
                       (B.displacement[0] - A.displacement[0]).asNumber())
     
 def gravitational_force(A, B):
-    unit_distance = array([math.cos(angle(A,B)), math.sin(angle(A,B))])
+    unit_distance = array([cos(angle(A,B)), sin(angle(A,B))])
     return G * A.mass * B.mass / distance(A,B)**2 * unit_distance
 
 def save(output_stream):
@@ -104,6 +104,7 @@ def load(input_stream):
             angular_acceleration = rad/s/s * habitat["angular_acceleration"]
         
             fuel = kg * habitat["fuel"]
+            rcs_fuel = kg * habitat["rcs_fuel"]
             
         except KeyError:
             print("habitat " + name + " has undefined elements, skipping...")
@@ -112,7 +113,7 @@ def load(input_stream):
                                     displacement, velocity, acceleration,
                                     angular_position, angular_speed,
                                     angular_acceleration,
-                                    fuel))
+                                    fuel, rcs_fuel))
     
     global entities
     entities = json_entities
@@ -137,12 +138,50 @@ class Telemetry:
             if entity.name == name:
                 entity.accelerate(force, angle)
     
-    def change_engines(self, name, increment):
+    def change_main_engines(self, name, increment):
         "Changes the engine usage of the specified entity. Fails if no engines"
         for entity in entities:
             if entity.name == name:
-                entity.engine_usage += increment
+                entity.main_engines.usage += increment
         
+    def fire_rcs_thrusters(self, name, direction):
+        "Changes the rcs usage of the specified entity. Fails if no thrusters"
+        target = Entity
+        for entity in entities:
+            if entity.name == name:
+                target = entity
+        
+        rcs_thrust = target.rcs.thrust(1/tps)
+        theta = direction + target.angular_position
+        rcs_thrust_vector = \
+            N * array((cos(theta) * rcs_thrust.asNumber(), 
+                       sin(theta) * rcs_thrust.asNumber()))
+        for angle in target.rcs.engine_positions:
+            target.accelerate(
+                rcs_thrust_vector/len(target.rcs.engine_positions), angle)
+        
+    def fire_vernier_thrusters(self, name, amount):
+        "Changes the vernier thrusters of the specified entity. Fails if none"
+        target = Entity
+        for entity in entities:
+            if entity.name == name:
+                target = entity
+       
+        vernier_thrust = target.rcs.thrust(1/tps)
+        vernier_thrust_vector = \
+            N * array((0, vernier_thrust.asNumber())) * amount
+        target.accelerate(vernier_thrust_vector, 0)
+        target.accelerate(-vernier_thrust_vector, pi)
+        #for angle in target.rcs.engine_positions:
+            #target.accelerate(
+                #vernier_thrust_vector/len(target.rcs.engine_positions), angle)
+            #print(vernier_thrust_vector,angle)
+            ## this code rotates the vernier_thrust_vector by pi/2, since to
+            ## rotate a vector, (x,y) = (-y, x)
+            #vernier_thrust_vector[0], vernier_thrust_vector[1] = \
+            #-vernier_thrust_vector[1], vernier_thrust_vector[0]
+
+    
     def save(self, filepath):
         "Wrapper for save(), callable on a client machine"
         with open(filepath, "w") as savefile:

@@ -2,7 +2,7 @@ from unum.units import rad,m,s,kg,N
 import collections
 from math import atan2,cos,sin,pi
 import scipy.linalg as linalg
-from scipy import array
+from scipy import array,sign
 
 class Entity:
     "Base class for all physical objects"
@@ -37,7 +37,7 @@ class Entity:
         An angle of pi/2 would mean the force is applied on the left
         ("front" is where the entity is pointing, i.e. self.angular_position)
         """
-        angle += self.angular_position
+        #angle += self.angular_position
         # F_theta is the angle of the vector F from the x axis
         ## for example, a force vector pointing directly up will have
         ## F_theta = pi/2
@@ -54,15 +54,20 @@ class Entity:
         # F is the force that is used in making linear acceleration
         F_cen = force * abs(cos(angle - F_theta))
         self.acceleration += F_cen / self.mass
+        #if linalg.norm(F_cen.asNumber()) != 0:
+            #print(F_cen)
         
         # w = T / I
         ## where
         # w is angular acceleration in rad/s/s
         # T is torque in J/rad
         # I is moment of inertia in kg*m^2
+        #angle -= self.angular_position
         T = N * linalg.norm(force.asNumber()) \
             * self.radius * sin(angle - F_theta)
         self.angular_acceleration += T / self.moment_of_inertia()
+        #if T != N*m * 0:
+            #print(T)
         
     def move(self, time):
         "Updates velocities, positions, and rotations for entity"
@@ -96,37 +101,52 @@ class Entity:
         ])
         
         return blob
-        
-class Habitat(Entity):
-    "A special class for the habitat"
-    
-    def __init__(self, name, color, mass, radius,
-                 displacement, velocity, acceleration,
-                 angular_position, angular_speed, angular_acceleration,
-                 fuel):
-        Entity.__init__(self, name, color, mass, radius,
-                 displacement, velocity, acceleration,
-                 angular_position, angular_speed, angular_acceleration)
-        
+         
+class Engine:
+    def __init__(self, fuel, rated_fuel_flow, I_sp, engine_positions):
         self.fuel = fuel
-        self.engine_usage = 0
-        self.fuel_flow_rate = 10 * kg/s
-        self.I_sp = 500 * m/s
-        
-    def move(self, time):
-        "kind of a place holder function atm"
-        if self.fuel > (self.fuel_flow_rate * abs(self.engine_usage)) * time:
-            fuel_usage = self.fuel_flow_rate * abs(self.engine_usage)
-            self.fuel -= (self.fuel_flow_rate * abs(self.engine_usage)) * time
+        self.rated_fuel_flow = rated_fuel_flow
+        self.I_sp = I_sp
+        self.engine_positions = engine_positions
+        self.usage = 0
+    
+    def thrust(self, time):
+        if self.fuel > (self.rated_fuel_flow * abs(self.usage)) * time:
+            fuel_usage = self.rated_fuel_flow * self.usage
+            self.fuel -= fuel_usage*sign(self.usage) * time
         else:
             fuel_usage = self.fuel / time
             self.fuel = 0 * kg
+        return self.I_sp * fuel_usage
+
+       
+class Habitat(Entity):
+    "A special class for the habitat"
+
+    def __init__(self, name, color, mass, radius,
+                 displacement, velocity, acceleration,
+                 angular_position, angular_speed, angular_acceleration,
+                 fuel, rcs_fuel):
+        Entity.__init__(self, name, color, mass, radius,
+                 displacement, velocity, acceleration,
+                 angular_position, angular_speed, angular_acceleration)
+
+        self.main_engines = Engine(fuel, 100 * kg/s, 5000 * m/s, [pi])
+        self.rcs = \
+            Engine(rcs_fuel, 5 * kg/s, 3000 * m/s, [0, pi/2, pi, 3*pi/2])
+        self.rcs.usage = 1
         
-        print(self.fuel)
-        print(fuel_usage)
-            
-        thrust = self.I_sp * fuel_usage
-        thrust_vector = N *array((cos(self.angular_position)*thrust.asNumber(),
-                                  sin(self.angular_position)*thrust.asNumber()))
-        self.accelerate(thrust_vector, pi/2)
+    def move(self, time):
+        "kind of a place holder function atm"
+        
+        thrust = self.main_engines.thrust(time)
+        thrust_vector = \
+            N * array((cos(self.angular_position)*thrust.asNumber(),
+                       sin(self.angular_position)*thrust.asNumber()))
+        for angle in self.main_engines.engine_positions:
+            self.accelerate(
+                thrust_vector/len(self.main_engines.engine_positions),
+                angle + self.angular_position)
+        
+        
         Entity.move(self, time)
