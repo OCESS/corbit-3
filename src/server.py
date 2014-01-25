@@ -1,6 +1,7 @@
 __version__ = "3.0.0"
 
 from entity import Entity,Habitat
+import physics
 from scipy import array, linalg
 import json
 from unum.units import N,m,s,kg,rad,Hz
@@ -26,15 +27,15 @@ G = 6.6720E-11 * N*m**2/kg**2
 
 
 def distance(A, B):
-    return m * linalg.norm(A.displacement.asNumber() - B.displacement.asNumber())
+    return m * linalg.norm((A.displacement - B.displacement).asNumber(m))
 
 def angle(A, B):
-    return atan2((B.displacement[1] - A.displacement[1]).asNumber(),
-                      (B.displacement[0] - A.displacement[0]).asNumber())
+    return atan2((B.displacement[1] - A.displacement[1]),
+                      (B.displacement[0] - A.displacement[0]))
     
 def gravitational_force(A, B):
     unit_distance = array([cos(angle(A,B)), sin(angle(A,B))])
-    return G * A.mass * B.mass / distance(A,B)**2 * unit_distance
+    return G * A.mass() * B.mass() / distance(A,B)**2 * unit_distance
 
 def save(output_stream):
     json_data = {}
@@ -210,6 +211,9 @@ def simulate_tick():
     #    theta = angle(A, B)
     #    A.accelerate(gravity, theta)
     #    B.accelerate(-gravity, theta)
+
+    for A, B in itertools.combinations(entities, 2):
+        physics.resolve_collision(A, B, 1/tps)
     
     entity_lock.release()
 
@@ -227,7 +231,7 @@ server_thread.start()
 
 
 while True:
-    time.sleep(1/tps.asNumber())
+    time.sleep(1/tps.asNumber(Hz))
     threading.Thread(target = simulate_tick).start()
 
 

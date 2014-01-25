@@ -1,7 +1,7 @@
 from unum.units import rad,m,s,kg,N
 import collections
 from math import atan2,cos,sin,pi
-import scipy.linalg as linalg
+import scipy.linalg as LA
 from scipy import array,sign
 
 class Entity:
@@ -13,7 +13,7 @@ class Entity:
         
         self.name = name    # should be a string
         self.color = color  # should be a tuple, e.g. (255,255,5)
-        self.mass = mass    # should be in units of kg
+        self.dry_mass = mass    # should be in units of kg
         self.radius = radius    # should be in units of m
         
         self.displacement = displacement    # should be in units of m
@@ -24,9 +24,12 @@ class Entity:
         self.angular_speed = angular_speed            # units: radians/s
         self.angular_acceleration = angular_acceleration    # units: radians/s/s
     
+    def mass(self):
+        return self.dry_mass
+    
     def moment_of_inertia(self):
         "Returns the entity's moment of inertia, which is that of a sphere"
-        return (2 * self.mass * self.radius**2) / 5
+        return (2 * self.mass() * self.radius**2) / 5
     
     def accelerate(self, force, angle):
         """
@@ -53,8 +56,8 @@ class Entity:
         # a is linear acceleration, m is mass of entity
         # F is the force that is used in making linear acceleration
         F_cen = force * abs(cos(angle - F_theta))
-        self.acceleration += F_cen / self.mass
-        #if linalg.norm(F_cen.asNumber()) != 0:
+        self.acceleration += F_cen / self.mass()
+        #if LA.norm(F_cen.asNumber()) != 0:
             #print(F_cen)
         
         # w = T / I
@@ -63,7 +66,7 @@ class Entity:
         # T is torque in J/rad
         # I is moment of inertia in kg*m^2
         #angle -= self.angular_position
-        T = N * linalg.norm(force.asNumber()) \
+        T = N * LA.norm(force.asNumber()) \
             * self.radius * sin(angle - F_theta)
         self.angular_acceleration += T / self.moment_of_inertia()
         #if T != N*m * 0:
@@ -73,7 +76,7 @@ class Entity:
         "Updates velocities, positions, and rotations for entity"
         
         self.velocity += self.acceleration * time
-        self.acceleration = 0 * m/s/s
+        self.acceleration = m/s/s * array((0,0))
         self.displacement += self.velocity * time
 
         self.angular_speed += self.angular_acceleration * time
@@ -87,7 +90,7 @@ class Entity:
         
          ("name", self.name),
          ("color", self.color),  
-         ("mass", self.mass.asNumber()),
+         ("mass", self.mass().asNumber()),
          ("radius", self.radius.asNumber()),
          
          ("displacement", self.displacement.asNumber().tolist()),
@@ -130,11 +133,14 @@ class Habitat(Entity):
         Entity.__init__(self, name, color, mass, radius,
                  displacement, velocity, acceleration,
                  angular_position, angular_speed, angular_acceleration)
-
+        
         self.main_engines = Engine(fuel, 100 * kg/s, 5000 * m/s, [pi])
         self.rcs = \
             Engine(rcs_fuel, 5 * kg/s, 3000 * m/s, [0, pi/2, pi, 3*pi/2])
         self.rcs.usage = 1
+    
+    def mass(self):
+        return self.dry_mass + self.rcs.fuel + self.main_engines.fuel
         
     def move(self, time):
         "kind of a place holder function atm"
