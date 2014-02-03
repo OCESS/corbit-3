@@ -8,7 +8,7 @@
                 0
             ],
             "displacement": [
-                -75,
+                -100,
                 -75
             ],
             "velocity": [
@@ -19,7 +19,7 @@
                 0,
                 0
             ],
-            "mass": 2e15,
+            "mass": 100,
             "radius": 13,
             "angular_position": 21,
             "angular_speed": 22,
@@ -35,24 +35,24 @@
                 0
             ],
             "displacement": [
-                -300,
+                -125,
                 -75
             ],
             "velocity": [
-                200,
+                1,
                 0
             ],
             "acceleration": [
                 0,
                 0
             ],
-            "mass": 2000,
+            "mass": 100,
             "radius": 8,
             "angular_position": 0,
             "angular_speed": 0,
             "angular_acceleration": 0,
-            "fuel": 10000,
-            "rcs_fuel": 500
+            "fuel": 0,
+            "rcs_fuel": 0
         }
     ]
 }

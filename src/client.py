@@ -42,7 +42,7 @@ while connected == False:
     except Pyro4.errors.CommunicationError:
         connected = False
 
-camera = Camera(10, "AC")
+camera = Camera(1)
 
 telem.load("../res/OCESS.json") # gets the server to load the default save
 

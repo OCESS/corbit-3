@@ -70,11 +70,15 @@ def resolve_collision(A, B, time):
     vBt_ = vBt
     
     # centripetal velocities are calculated with a simple 1D collision formula
+    R = 0.8
+
     vAn_ = \
-     (vAn * (A.mass() - B.mass()) + 2*B.mass() * vBn) / (A.mass() + B.mass())
+     (A.mass()*vAn + B.mass()*vBn + R * B.mass()*(B.velocity - A.velocity)) / \
+     (A.mass() + B.mass())
 
     vBn_ = \
-     (vBn * (B.mass() - A.mass()) + 2*A.mass() * vAn) / (B.mass() + A.mass())
+     (A.mass()*vAn + B.mass()*vBn + R * A.mass()*(A.velocity - B.velocity)) / \
+     (A.mass() + B.mass())
 
     # convert scalar normal and tangent velocities to vector quantities
     VAn = vAn_ * un
@@ -82,11 +86,11 @@ def resolve_collision(A, B, time):
 
     VBn = vBn_ * un
     VBt = vBt_ * unt
-
+    
     # move until the point of impact
     A.move(t_to_impact);
     B.move(t_to_impact);
-
+    
     # add em up to get v'
     A.velocity = VAn + VAt
     B.velocity = VBn + VBt
