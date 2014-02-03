@@ -202,9 +202,6 @@ telem.load("../res/OCESS.json")
 def simulate_tick():
     
     entity_lock.acquire()
-
-    for entity in entities:
-        entity.move(1/tps)
     
     #for A, B in itertools.combinations(entities, 2):
     #    gravity = gravitational_force(A, B)
@@ -212,8 +209,20 @@ def simulate_tick():
     #    A.accelerate(gravity, theta)
     #    B.accelerate(-gravity, theta)
 
+    collisions = []
     for A, B in itertools.combinations(entities, 2):
-        physics.resolve_collision(A, B, 1/tps)
+        affected_objects = physics.resolve_collision(A, B, 1/tps)
+        if affected_objects != None:
+            collisions += affected_objects
+    
+    for entity in entities:
+        already_moved = False
+        for name in collisions:
+            if entity.name == name:
+                already_moved = True
+        
+        if not already_moved:
+            entity.move(1/tps)
     
     entity_lock.release()
 

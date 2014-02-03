@@ -9,26 +9,24 @@ class Camera:
         self.center = center
         if self.center == None:
             self.locked = False
-            self.displacement = m * array([0,0]) 
-            self.velocity = m/s * array([0,0])
-            self.acceleration = m/s/s * array([0,0])
         else:
             self.locked = True
-            self.displacement = center.displacement
-            self.velocity = center.velocity
-            self.acceleration = center.acceleration
+        
+        self.displacement = m * array([0,0]) 
+        self.velocity = m/s * array([0,0])
+        self.acceleration = m/s/s * array([0,0])
         
         self.zoom_level = zoom_level
     
     locked = True
     speed = 1e2
 
-    def update(self):
+    def update(self, entity):
         "Updates the camera's position to match that of the center"
         if self.locked:
-            self.displacement = self.center.displacement
-            self.velocity = self.center.velocity
-            self.acceleration = self.center.acceleration
+            self.displacement = entity.displacement
+            self.velocity = entity.velocity
+            self.acceleration = entity.acceleration
     
     def pan(self, amount):
         "Pan the camera by a vector amount"

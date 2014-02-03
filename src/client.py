@@ -42,7 +42,7 @@ while connected == False:
     except Pyro4.errors.CommunicationError:
         connected = False
 
-camera = Camera(1, telem.entity("AC"))
+camera = Camera(10, "AC")
 
 telem.load("../res/OCESS.json") # gets the server to load the default save
 
@@ -66,9 +66,9 @@ while True:
             elif event.key == K_RIGHT:
                 camera.pan(m/s/s * array((1, 0)))
             elif event.key == K_UP:
-                camera.pan(m/s/s * array((0, -camera.speed)))
+                camera.pan(m/s/s * array((0, 1)))
             elif event.key == K_DOWN:
-                camera.pan(m/s/s * array((0, camera.speed)))
+                camera.pan(m/s/s * array((0, -1)))
             
             elif event.unicode == "a":
                 telem.fire_vernier_thrusters("AC", -1)
@@ -93,8 +93,11 @@ while True:
             elif event.unicode == "+":
                 camera.zoom(0.1)
             
+            elif event.unicode == "r":
+                telem.load("../res/OCESS.json")
+    
     camera.move(1/fps)
-    camera.update()
+    camera.update(telem.entity(camera.center))
     
     ## Drawing routines here 
     for entity in telem.entities():
