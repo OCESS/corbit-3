@@ -1,29 +1,32 @@
 __version__ = "3.0.0"
-
-from entity import Entity,Habitat
-import physics
+import corbit
 from scipy import array, linalg
 import json
 from unum.units import N,m,s,kg,rad,Hz
 import atexit
-import threading
 import time
 import itertools
 from math import sin,cos,atan2,pi
-import Pyro4
+import socket
+import threading
 
 print("Corbit SERVER " + __version__)
-tps = 60 * Hz
 
-entity_lock = threading.Lock()
+entities = []   # This object stores a list of all entities
 
-Pyro4.config.SERIALIZER = "pickle"
-Pyro4.config.SERIALIZERS_ACCEPTED.clear()
-Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle")
-HOST = "localhost"  # IP address to bind to
-PORT = 3141        # Arbitrary port I picked
+time_acc_index = 0
+time_acceleration = [1, 5, 10, 50, 100, 1000, 10000, 100000]
+def time_per_tick():
+    return time_acceleration[time_acc_index] / (60*Hz)
 
 G = 6.6720E-11 * N*m**2/kg**2
+PORT = 3141
+
+
+serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serversocket.setblocking(False)
+
+serversocket.bind((socket.gethostname(), PORT))
 
 
 def distance(A, B):
@@ -37,173 +40,101 @@ def gravitational_force(A, B):
     unit_distance = array([cos(angle(A,B)), sin(angle(A,B))])
     return G * A.mass() * B.mass() / distance(A,B)**2 * unit_distance
 
-def save(output_stream):
-    json_data = {}
-    json_data["entities"] = []
-    
-    for entity in entities:
-        json_data["entities"].append(entity.dict_repr())
-    
-    json.dump(json_data, output_stream,
-              indent=4, sort_keys=False, separators=(",", ": "))
 
-def load(input_stream):
-    "Loads a list of entities when provided with a JSON "
-    json_root = json.load(input_stream)
-    json_entities = []
+
+def accelerate_time(self, amount):
+    "Increases how much time is simulated per tick of the server program"
+    global time_acc_index
+    global time_acceleration
     
+    if time_acc_index + amount < 0:
+        return
     try:
-        data = json_root["entities"]
-    except KeyError:
-        print("no entities found")
-    for entity in data:
-        try:
-            name = entity["name"]
-        except:
-            print("unnamed entity found, skipping")
-            break
-        try:
-            color = entity["color"]
-            mass = kg * entity["mass"]
-            radius = m * entity["radius"]
-            
-            displacement = m * array(entity["displacement"])
-            velocity = m/s * array(entity["velocity"])
-            acceleration = m/s/s * array(entity["acceleration"])
-            
-            angular_position = rad * entity["angular_position"]
-            angular_speed = rad/s * entity["angular_speed"]
-            angular_acceleration = rad/s/s * entity["angular_acceleration"]
-            
-        except KeyError:
-            print("entity " + name + " has undefined elements, skipping...")
-            break
-        
-        json_entities.append(Entity(name, color, mass, radius,
-                                    displacement, velocity, acceleration,
-                                    angular_position, angular_speed,
-                                    angular_acceleration))
+        time_acceleration[time_acc_index + amount]
+        print(time_acc_index + amount)
+    except IndexError:
+        return
     
-    data = json_root["habitats"]
-    for habitat in data:
-        try:
-            name = habitat["name"]
-        except KeyError:
-            print("unnamed habitat found, skipping")
-            break
-        try:
-            color = habitat["color"]
-            mass = kg * habitat["mass"]
-            radius = m * habitat["radius"]
-            
-            displacement = m * array(habitat["displacement"])
-            velocity = m/s * array(habitat["velocity"])
-            acceleration = m/s/s * array(habitat["acceleration"])
-            
-            angular_position = rad * habitat["angular_position"]
-            angular_speed = rad/s * habitat["angular_speed"]
-            angular_acceleration = rad/s/s * habitat["angular_acceleration"]
-        
-            fuel = kg * habitat["fuel"]
-            rcs_fuel = kg * habitat["rcs_fuel"]
-            
-        except KeyError:
-            print("habitat " + name + " has undefined elements, skipping...")
-            break
-        json_entities.append(Habitat(name, color, mass, radius,
-                                    displacement, velocity, acceleration,
-                                    angular_position, angular_speed,
-                                    angular_acceleration,
-                                    fuel, rcs_fuel))
-    
+    time_acc_index += amount
+
+def accelerate(name, force, angle):
+    "Wrapper for accelerating entities, callable on a client machine"
     global entities
-    entities = json_entities
+    for entity in entities:
+        if entity.name == name:
+            entity.accelerate(force, angle)
+
+def change_main_engines(name, increment):
+    "Changes the engine usage of the specified entity. Fails if no engines"
+    global entities
+    for entity in entities:
+        if entity.name == name:
+            entity.main_engines.usage += increment
+    
+def fire_rcs_thrusters(name, direction):
+    "Changes the rcs usage of the specified entity. Fails if no thrusters"
+    global entities
+    target = corbit.Entity
+    for entity in entities:
+        if entity.name == name:
+            target = entity
+    
+    rcs_thrust = target.rcs.thrust(time_per_tick())
+    theta = direction + target.angular_position
+    rcs_thrust_vector = \
+        N * array((cos(theta) * rcs_thrust.asNumber(), 
+                   sin(theta) * rcs_thrust.asNumber()))
+    for angle in target.rcs.engine_positions:
+        target.accelerate(
+            rcs_thrust_vector/len(target.rcs.engine_positions), angle)
+    
+def fire_vernier_thrusters(name, amount):
+    "Changes the vernier thrusters of the specified entity. Fails if none"
+    global entities
+    target = corbit.Entity
+    for entity in entities:
+        if entity.name == name:
+            target = entity
+   
+    vernier_thrust = target.rcs.thrust(time_per_tick())
+    vernier_thrust_vector = \
+        N * array((0, vernier_thrust.asNumber())) * amount
+    target.accelerate(vernier_thrust_vector, 0)
+    target.accelerate(-vernier_thrust_vector, pi)
+    #for angle in target.rcs.engine_positions:
+        #target.accelerate(
+            #vernier_thrust_vector/len(target.rcs.engine_positions), angle)
+        #print(vernier_thrust_vector,angle)
+        ## this code rotates the vernier_thrust_vector by pi/2, since to
+        ## rotate a vector, (x,y) = (-y, x)
+        #vernier_thrust_vector[0], vernier_thrust_vector[1] = \
+        #-vernier_thrust_vector[1], vernier_thrust_vector[0]
 
 
-class Telemetry:
-    "Class that transfers data between server and other programs"
-    
-    def entities(self):
-        "Wrapper for accessing entities, callable on a client machine"
-        return entities
-    
-    def entity(self, name):
-        "Accesses the first entity specified by name"
-        for entity in entities:
-            if entity.name == name:
-                return entity
-    
-    def accelerate(self, name, force, angle):
-        "Wrapper for accelerating entities, callable on a client machine"
-        for entity in entities:
-            if entity.name == name:
-                entity.accelerate(force, angle)
-    
-    def change_main_engines(self, name, increment):
-        "Changes the engine usage of the specified entity. Fails if no engines"
-        for entity in entities:
-            if entity.name == name:
-                entity.main_engines.usage += increment
-        
-    def fire_rcs_thrusters(self, name, direction):
-        "Changes the rcs usage of the specified entity. Fails if no thrusters"
-        target = Entity
-        for entity in entities:
-            if entity.name == name:
-                target = entity
-        
-        rcs_thrust = target.rcs.thrust(1/tps)
-        theta = direction + target.angular_position
-        rcs_thrust_vector = \
-            N * array((cos(theta) * rcs_thrust.asNumber(), 
-                       sin(theta) * rcs_thrust.asNumber()))
-        for angle in target.rcs.engine_positions:
-            target.accelerate(
-                rcs_thrust_vector/len(target.rcs.engine_positions), angle)
-        
-    def fire_vernier_thrusters(self, name, amount):
-        "Changes the vernier thrusters of the specified entity. Fails if none"
-        target = Entity
-        for entity in entities:
-            if entity.name == name:
-                target = entity
-       
-        vernier_thrust = target.rcs.thrust(1/tps)
-        vernier_thrust_vector = \
-            N * array((0, vernier_thrust.asNumber())) * amount
-        target.accelerate(vernier_thrust_vector, 0)
-        target.accelerate(-vernier_thrust_vector, pi)
-        #for angle in target.rcs.engine_positions:
-            #target.accelerate(
-                #vernier_thrust_vector/len(target.rcs.engine_positions), angle)
-            #print(vernier_thrust_vector,angle)
-            ## this code rotates the vernier_thrust_vector by pi/2, since to
-            ## rotate a vector, (x,y) = (-y, x)
-            #vernier_thrust_vector[0], vernier_thrust_vector[1] = \
-            #-vernier_thrust_vector[1], vernier_thrust_vector[0]
+with open("../res/OCESS.json", "r") as loadfile:
+    entities = corbit.load(loadfile)
 
-    
-    def save(self, filepath):
-        "Wrapper for save(), callable on a client machine"
-        with open(filepath, "w") as savefile:
-            save(savefile)
-             
-    def load(self, filepath):
-        "Wrapper for load(), callable on a client machine"
-        with open(filepath, "r") as loadfile:
-            load(loadfile)
-        
+serversocket.setblocking(False)
+serversocket.listen(5)
+connection_established = False
 
-telem = Telemetry()
+def exit_handler():
+    serversocket.close()
+
+atexit.register(exit_handler)
+
+ticks_to_simulate = 0
+def ticker():
+    global ticks_to_simulate
+    ticks_to_simulate += 1
+    threading.Timer(time_per_tick().asNumber(s), ticker).start()
+
+ticker()
 
 
-telem.load("../res/OCESS.json")
-
-def simulate_tick():
+while True:
     
-    entity_lock.acquire()
-    
-    #for A, B in itertools.combinations(entities, 2):
+        #for A, B in itertools.combinations(entities, 2):
     #    gravity = gravitational_force(A, B)
     #    theta = angle(A, B)
     #    A.accelerate(gravity, theta)
@@ -211,7 +142,7 @@ def simulate_tick():
 
     collisions = []
     for A, B in itertools.combinations(entities, 2):
-        affected_objects = physics.resolve_collision(A, B, 1/tps)
+        affected_objects = corbit.resolve_collision(A, B, time_per_tick())
         if affected_objects != None:
             collisions += affected_objects
     
@@ -222,26 +153,34 @@ def simulate_tick():
                 already_moved = True
         
         if not already_moved:
-            entity.move(1/tps)
+            entity.move(time_per_tick())
+            
+    ticks_to_simulate -= 1
     
-    entity_lock.release()
-
-
-daemon = Pyro4.Daemon(HOST, PORT)
-daemon.register(telem, "telem")
-
-def exit_handler():
-    daemon.close()
-
-atexit.register(exit_handler)
-
-server_thread = threading.Thread(target = daemon.requestLoop)
-server_thread.start()
-
-
-while True:
-    time.sleep(1/tps.asNumber(Hz))
-    threading.Thread(target = simulate_tick).start()
+    while ticks_to_simulate <= 0:
+        if not connection_established:
+            try:
+                clientsocket, address = serversocket.accept()
+                print(address,"Connected")
+                connection_established = True
+            except socket.error:
+                None
+        if connection_established:
+            print("getting commands")
+            commands = corbit.recvall(clientsocket)
+            print("got commands")
+            print(commands)
+            
+            print("sending entities")
+            print(corbit.json_serialize(entities).encode())
+            clientsocket.sendall(corbit.json_serialize(entities).encode())
+            print("entities sent")
+            
+            print("checking connection state")
+            if clientsocket.recv(1024).decode() != "state acknowledged":
+                connection_established = False
+                print("connection failed")
+            print("connected")
 
 
 print("okay")

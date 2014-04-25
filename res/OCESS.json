@@ -35,12 +35,12 @@
                 0
             ],
             "displacement": [
-                -125,
+                -180,
                 -75
             ],
             "velocity": [
-                1,
-                0
+                15,
+                -2
             ],
             "acceleration": [
                 0,
@@ -51,8 +51,8 @@
             "angular_position": 0,
             "angular_speed": 0,
             "angular_acceleration": 0,
-            "fuel": 0,
-            "rcs_fuel": 0
+            "fuel": 1000,
+            "rcs_fuel": 100
         }
     ]
 }

@@ -1,6 +1,8 @@
+todo: try making the client read the entity state file by turning it into a readfile
+
+
 __version__ = "3.0.0"
-from entity import Entity,Habitat   # Corbit modules
-from camera import Camera           # more Corbit modules
+import corbit
 import sys      # used to exit the program
 import pygame   # used for drawing and a couple other things
 from pygame.locals import *     # so I don't have to type out KB_LEFT, etc
@@ -8,20 +10,14 @@ from unum.units import m,s,Hz,N # physical units that are used
 from scipy import array         # scipy.array is what I represent a vector
                                 # quantity with, e.g. velocity, displacement
 from math import sin,cos,pi
-import Pyro4                    # used to communicate with the server
+import socket                   # used to communicate with the server
+import time
 
 print("Corbit PILOT " + __version__)
 fps = 60 * Hz
+entities = []                   # this list will store all the entities
+PORT = 3141
 
-
-Pyro4.config.SERIALIZER = "pickle"  # I chose pickle because I'm only going to
-                                    # be running this on secure, isolated
-                                    # networks
-Pyro4.config.SERIALIZERS_ACCEPTED.clear()
-Pyro4.config.SERIALIZERS_ACCEPTED.add("pickle") # I'll only be using pickle
-uri = "PYRO:telem@localhost:3141"   # Where to find the telemetry data
-telem = Pyro4.Proxy(uri)            # this object will be used to communicate
-                                    # with the server
 
 # just setting up the display and window here
 screen_size = (681, 745)
@@ -32,23 +28,30 @@ screen = pygame.display.set_mode(screen_size, display_flags)
 pygame.display.set_caption("Corbit " + __version__)
 pygame.key.set_repeat(800,25)
 
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect((socket.gethostname(), PORT))
 
-connected = False
-print("connecting")
-while connected == False:
-    try:
-        print("Found objects:\n",telem.entities())
-        connected = True
-    except Pyro4.errors.CommunicationError:
-        connected = False
+camera = corbit.Camera(1, "AC")
 
-camera = Camera(1)
+def print_text(text, font, gap, line_number, display):
+    label = font.render(text, 1, (200,200,200))
+    display.blit(label, (gap[0], gap[1] * line_number))
+    return line_number + 1
 
-telem.load("../res/OCESS.json") # gets the server to load the default save
+def draw(display):
+    line_number = 1
+    gap = [10,10]
+    pygame.draw.circle(display, (150,150,150), (10,10), 10)
+    display_font = pygame.font.SysFont("monospace", 15)
+    line_number = print_text("here we go here we go here we go",
+                             display_font, gap, line_number, display)
+    line_number = print_text("here we go here we go here we go",
+                             display_font, gap, line_number, display)
+    
 
 while True:
     
-    clock.tick(fps.asNumber())
+    commands_to_send = " "
     
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -71,36 +74,56 @@ while True:
                 camera.pan(m/s/s * array((0, -1)))
             
             elif event.unicode == "a":
-                telem.fire_vernier_thrusters("AC", -1)
+                commands_to_send += " fire_verniers|AC,-1"
             elif event.unicode == "d":
-                telem.fire_vernier_thrusters("AC", 1)
+                commands_to_send += " fire_verniers|AC,1"
             elif event.unicode == "w":
-                telem.change_main_engines("AC", 0.01)
+                commands_to_send += " change_engines|AC,0.01"
             elif event.unicode == "s":
-                telem.change_main_engines("AC", -0.01)
+                commands_to_send += " change_engines|AC,-0.01"
             
             elif event.unicode == "W":
-                telem.fire_rcs_thrusters("AC", 0)
+                commands_to_send += " fire_rcs|AC,0"
             elif event.unicode == "A":
-                telem.fire_rcs_thrusters("AC", pi/2)
+                commands_to_send += " fire_rcs|AC," + str(pi/2)
             elif event.unicode == "S":
-                telem.fire_rcs_thrusters("AC", pi)
+                commands_to_send += " fire_rcs|AC," + str(pi)
             elif event.unicode == "D":
-                telem.fire_rcs_thrusters("AC", -pi/2)
+                commands_to_send += " fire_rcs|AC," + str(-pi/2)
                 
             elif event.unicode == "-":
                 camera.zoom(-0.1)
             elif event.unicode == "+":
                 camera.zoom(0.1)
             
+            elif event.unicode == ".":
+                commands_to_send += " accelerate_time|1"
+            elif event.unicode == ",":
+                commands_to_send += " accelerate_time|-1"
+            
             elif event.unicode == "r":
-                telem.load("../res/OCESS.json")
+                commands_to_send += " load|../res/OCESS.json"
     
-    camera.move(1/fps)
-    camera.update(telem.entity(camera.center))
+    print("sending commands")
+    print(commands_to_send)
+    sock.sendall(commands_to_send.encode())
+    print("commands sent")
+    
+    print("receiving entities")
+    sock.makefile("")
+    lol = corbit.recvall(sock)
+    print("entities received")
+    print(total_data)
+    
+    print("checking conn")
+    sock.sendall("state acknowledged".encode())
+    print("checked")
+        
+    #camera.move(1/fps)
+    #camera.update(entity(camera.center))
     
     ## Drawing routines here 
-    for entity in telem.entities():
+    for entity in entities:
         # calculating the on-screen position
         screen_position = \
          [
@@ -116,11 +139,11 @@ while True:
         # calculating the on-screen radius
         screen_radius = int(entity.radius.asNumber() * camera.zoom_level)
          
-        if type(entity) == Entity:
+        if type(entity) == corbit.Entity:
             # entity drawing is the simplest, just a circle
             pygame.draw.circle(screen, entity.color,
                                screen_position, screen_radius)
-        elif type(entity) == Habitat:
+        elif type(entity) == corbit.Habitat:
             # habitat is the entity drawing, but with a line pointing forwards
             pygame.draw.circle(screen, entity.color,
                                screen_position, screen_radius)
@@ -136,7 +159,17 @@ while True:
               )
              ]
             )
-
+    
+    
+    # flip the screen upside down, so that y values increase upwards
     screen.blit(pygame.transform.flip(screen, False, True), (0,0))
+    
+    draw(screen)
+    
     pygame.display.flip()
     screen.fill((0, 0, 0))
+    
+    #clock.tick(1/fps.asNumber(Hz))
+    time.sleep(1/fps.asNumber(Hz))
+
+sock.close()
