@@ -6,8 +6,7 @@
 res/client.json
 .project
 .pydevproject
-.idea/
-.idea/*
+.idea
 
 
 #################
