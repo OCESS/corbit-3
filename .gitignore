@@ -4,7 +4,10 @@
 
 # auto-generated
 res/client.json
-
+.project
+.pydevproject
+.idea/
+.idea/*
 
 
 #################
