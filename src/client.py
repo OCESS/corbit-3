@@ -1,6 +1,3 @@
-todo: try making the client read the entity state file by turning it into a readfile
-
-
 __version__ = "3.0.0"
 import corbit
 import sys      # used to exit the program
