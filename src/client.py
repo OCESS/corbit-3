@@ -101,10 +101,9 @@ while True:
             elif event.unicode == "r":
                 commands_to_send += " load|../res/OCESS.json"
 
-    commands_to_send += ";"
     print("sending commands")
     print(commands_to_send)
-    sock.sendall(commands_to_send.encode())
+    sock.sendall((commands_to_send + ";").encode())
     print("commands sent")
     
     print("receiving entities")
@@ -113,7 +112,7 @@ while True:
     print(lol)
     
     print("checking conn")
-    sock.sendall("state acknowledged".encode())
+    sock.sendall("state acknowledged;".encode())
     print("checked")
         
     #camera.move(1/fps)

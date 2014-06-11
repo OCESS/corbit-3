@@ -31,6 +31,7 @@ def recvall(sock):
             last_pair = bytes([chunk[-2], chunk[-1]]) # last_pair is a byte string of the last two bytes in chunk
             if end_marker in last_pair:
                 total_data[-2] = last_pair[:last_pair.find(end_marker) - 1]
+        print(chunk.decode())
     return total_data.decode()
 
 class Camera:

@@ -114,7 +114,7 @@ def fire_vernier_thrusters(name, amount):
 with open("../res/OCESS.json", "r") as loadfile:
     entities = corbit.load(loadfile)
 
-serversocket.setblocking(False)
+serversocket.setblocking(True)
 serversocket.listen(5)
 connection_established = False
 
@@ -173,14 +173,14 @@ while True:
             
             print("sending entities")
             print(corbit.json_serialize(entities).encode())
-            clientsocket.sendall(corbit.json_serialize(entities).encode())
+            clientsocket.sendall((corbit.json_serialize(entities) + ";").encode())
             print("entities sent")
             
             print("checking connection state")
-            if clientsocket.recv(1024).decode() != "state acknowledged":
+
+            if corbit.recvall(clientsocket) != "state acknowledged":
                 connection_established = False
                 print("connection failed")
-            print("connected")
 
 
 print("okay")
