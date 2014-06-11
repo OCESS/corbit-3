@@ -133,12 +133,14 @@ ticker()
 
 
 while True:
-    
-        #for A, B in itertools.combinations(entities, 2):
-    #    gravity = gravitational_force(A, B)
-    #    theta = angle(A, B)
-    #    A.accelerate(gravity, theta)
-    #    B.accelerate(-gravity, theta)
+
+    commands = ""
+
+    #    for A, B in itertools.combinations(entities, 2):
+    #        gravity = gravitational_force(A, B)
+    #        theta = angle(A, B)
+    #        A.accelerate(gravity, theta)
+    #        B.accelerate(-gravity, theta)
 
     collisions = []
     for A, B in itertools.combinations(entities, 2):
@@ -161,31 +163,62 @@ while True:
         if not connection_established:
             try:
                 clientsocket, address = serversocket.accept()
-                print(address,"initiated connection")
-                connection_established = False
-                print("checking connection")
-                if corbit.recvall(clientsocket) == "ACKnowledge connection":
-                    connection_established = True
-                print("got ACK")
-                if not corbit.sendall("connection ACKnowledged", clientsocket):
-                    connection_established = False
-                    print("client is deaf")
-                    break
-                print("it work")
+                connection_established = True
             except socket.error:
                 None
         else:
+            if corbit.recvall(clientsocket) == "ACKnowledge connection":
+                connection_established = True
+            if not corbit.sendall("connection ACKnowledged", clientsocket):
+                connection_established = False
+                print("client is deaf")
+                break
 
-            print("getting commands")
             commands = corbit.recvall(clientsocket)
             print("got commands")
             print(commands)
             
-            print("sending entities")
             if not corbit.sendall(corbit.json_serialize(entities), clientsocket):
                 connection_established = False
                 break
-            print("entities sent")
+
+    if commands != "":
+        print(commands.split(" "))
+        for command in commands.split(" "):
+            function, argument = command.split("|")[0], command.split("|")[1]
+            if len(command.split("|")) != 2:
+                print("Malformed command, should have exactly one '|':",command)
+            elif function == "fire_verniers":
+                if len(argument.split(",")) != 2:
+                    print("Malformed argument, should have exactly one ',':",command)
+                else:
+                    name, amount = argument.split(",")[0], float(argument.split(",")[1])
+                    fire_vernier_thrusters(name, amount)
+            elif function == "change_engines":
+                if len(argument.split(",")) != 2:
+                    print("Malformed argument, should have exactly one ',':",command)
+                else:
+                    name, amount = argument.split(",")[0], float(argument.split(",")[1])
+                    change_main_engines(name, amount)
+            elif function == "fire_rcs":
+                if len(argument.split(",")) != 2:
+                    print("Malformed argument, should have exactly one ',':",command)
+                else:
+                    name, direction = argument.split(",")[0], float(argument.split(",")[1])
+                    fire_rcs_thrusters(name, direction)
+            elif function == "accelerate_time":
+                if len(argument.split(",")) != 1:
+                    print("Malformed argument, should have exactly no ',':",command)
+                else:
+                    amount = int(argument)
+                    accelerate_time(amount)
+            elif function == "open":
+                if len(argument.split(",")) != 1:
+                    print("Malformed argument, should have exactly no ',':",command)
+                else:
+                    filename = argument
+                    with open(filename, "r") as loadfile:
+                        entities = corbit.load(loadfile)
 
 
 

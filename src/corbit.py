@@ -9,13 +9,15 @@ import json
 
 # This file simply contains a lot of the commonly-used functions, or
 # functions that would just clutter up the server.py and client.py files.
-# For example, corbit.Entity is in this namespace, so is corbit.load(file)
+# For example, corbit.Entity is in this namespace, so is corbit.load(stream)
 
 def sendall(msg, sock):
     try:
         sock.sendall((msg + ";").encode())
     except BrokenPipeError:
-        print("Tried sending",msg,"but connection broke!")
+        print("Tried sending")
+        print(msg)
+        print("but connection broke!")
         return False
     return True
 
