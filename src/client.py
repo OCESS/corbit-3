@@ -101,19 +101,19 @@ while True:
             elif event.unicode == "r":
                 commands_to_send += " load|../res/OCESS.json"
 
+    print("checking conn")
+    corbit.sendall("ACKnowledge connection", sock)
+    print(corbit.recvall(sock))
+    print("checked")
+
     print("sending commands")
     print(commands_to_send)
-    sock.sendall((commands_to_send + ";").encode())
+    corbit.sendall(commands_to_send, sock)
     print("commands sent")
     
     print("receiving entities")
-    lol = corbit.recvall(sock)
+    entities = corbit.load(corbit.recvall(sock))
     print("entities received")
-    print(lol)
-    
-    print("checking conn")
-    sock.sendall("state acknowledged;".encode())
-    print("checked")
         
     #camera.move(1/fps)
     #camera.update(entity(camera.center))

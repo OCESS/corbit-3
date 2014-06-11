@@ -11,6 +11,14 @@ import json
 # functions that would just clutter up the server.py and client.py files.
 # For example, corbit.Entity is in this namespace, so is corbit.load(file)
 
+def sendall(msg, sock):
+    try:
+        sock.sendall((msg + ";").encode())
+    except BrokenPipeError:
+        print("Tried sending",msg,"but connection broke!")
+        return False
+    return True
+
 def recvall(sock):
     # total_data = b""
     # while True:
@@ -31,7 +39,8 @@ def recvall(sock):
             last_pair = bytes([chunk[-2], chunk[-1]]) # last_pair is a byte string of the last two bytes in chunk
             if end_marker in last_pair:
                 total_data[-2] = last_pair[:last_pair.find(end_marker) - 1]
-        print(chunk.decode())
+        if chunk == b"":
+            break
     return total_data.decode()
 
 class Camera:
@@ -106,74 +115,82 @@ def json_serialize(entities):
     
     return json.dumps(json_data, separators=(",", ":"))                      
 
+import io
+
 def load(input_stream):
-    "Loads a list of entities when provided with a JSON "
+    "Loads a list of entities when provided with JSON"
+    if isinstance(input_stream, str):   # Converts strings to streams just like that
+        input_stream = io.StringIO(input_stream)
     json_root = json.load(input_stream)
     json_entities = []
     
     try:
         data = json_root["entities"]
+        for entity in data:
+            try:
+                name = entity["name"]
+            except:
+                print("unnamed entity found, skipping")
+                break
+            try:
+                color = entity["color"]
+                mass = kg * entity["mass"]
+                radius = m * entity["radius"]
+
+                displacement = m * array(entity["displacement"])
+                velocity = m/s * array(entity["velocity"])
+                acceleration = m/s/s * array(entity["acceleration"])
+
+                angular_position = rad * entity["angular_position"]
+                angular_speed = rad/s * entity["angular_speed"]
+                angular_acceleration = rad/s/s * entity["angular_acceleration"]
+
+            except KeyError:
+                print("entity " + name + " has undefined elements, skipping...")
+                break
+
+            json_entities.append(Entity(name, color, mass, radius,
+                                        displacement, velocity, acceleration,
+                                        angular_position, angular_speed,
+                                        angular_acceleration))
     except KeyError:
         print("no entities found")
-    for entity in data:
-        try:
-            name = entity["name"]
-        except:
-            print("unnamed entity found, skipping")
-            break
-        try:
-            color = entity["color"]
-            mass = kg * entity["mass"]
-            radius = m * entity["radius"]
-            
-            displacement = m * array(entity["displacement"])
-            velocity = m/s * array(entity["velocity"])
-            acceleration = m/s/s * array(entity["acceleration"])
-            
-            angular_position = rad * entity["angular_position"]
-            angular_speed = rad/s * entity["angular_speed"]
-            angular_acceleration = rad/s/s * entity["angular_acceleration"]
-            
-        except KeyError:
-            print("entity " + name + " has undefined elements, skipping...")
-            break
-        
-        json_entities.append(Entity(name, color, mass, radius,
-                                    displacement, velocity, acceleration,
-                                    angular_position, angular_speed,
-                                    angular_acceleration))
-    
-    data = json_root["habitats"]
-    for habitat in data:
-        try:
-            name = habitat["name"]
-        except KeyError:
-            print("unnamed habitat found, skipping")
-            break
-        try:
-            color = habitat["color"]
-            mass = kg * habitat["mass"]
-            radius = m * habitat["radius"]
-            
-            displacement = m * array(habitat["displacement"])
-            velocity = m/s * array(habitat["velocity"])
-            acceleration = m/s/s * array(habitat["acceleration"])
-            
-            angular_position = rad * habitat["angular_position"]
-            angular_speed = rad/s * habitat["angular_speed"]
-            angular_acceleration = rad/s/s * habitat["angular_acceleration"]
-        
-            fuel = kg * habitat["fuel"]
-            rcs_fuel = kg * habitat["rcs_fuel"]
-            
-        except KeyError:
-            print("habitat " + name + " has undefined elements, skipping...")
-            break
-        json_entities.append(Habitat(name, color, mass, radius,
-                                    displacement, velocity, acceleration,
-                                    angular_position, angular_speed,
-                                    angular_acceleration,
-                                    fuel, rcs_fuel))
+
+    try:
+        data = json_root["habitats"]
+        for habitat in data:
+            try:
+                name = habitat["name"]
+            except KeyError:
+                print("unnamed habitat found, skipping")
+                break
+            try:
+                color = habitat["color"]
+                mass = kg * habitat["mass"]
+                radius = m * habitat["radius"]
+
+                displacement = m * array(habitat["displacement"])
+                velocity = m/s * array(habitat["velocity"])
+                acceleration = m/s/s * array(habitat["acceleration"])
+
+                angular_position = rad * habitat["angular_position"]
+                angular_speed = rad/s * habitat["angular_speed"]
+                angular_acceleration = rad/s/s * habitat["angular_acceleration"]
+
+                fuel = kg * habitat["fuel"]
+                rcs_fuel = kg * habitat["rcs_fuel"]
+
+            except KeyError:
+                print("habitat " + name + " has undefined elements, skipping...")
+                break
+            json_entities.append(Habitat(name, color, mass, radius,
+                                        displacement, velocity, acceleration,
+                                        angular_position, angular_speed,
+                                        angular_acceleration,
+                                        fuel, rcs_fuel))
+
+    except KeyError:
+        print("no habitats found")
     return json_entities
 
 
