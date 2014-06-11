@@ -48,7 +48,7 @@ def draw(display):
 
 while True:
     
-    commands_to_send = " "
+    commands_to_send = ""
     
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -100,17 +100,17 @@ while True:
             
             elif event.unicode == "r":
                 commands_to_send += " load|../res/OCESS.json"
-    
+
+    commands_to_send += ";"
     print("sending commands")
     print(commands_to_send)
     sock.sendall(commands_to_send.encode())
     print("commands sent")
     
     print("receiving entities")
-    sock.makefile("")
     lol = corbit.recvall(sock)
     print("entities received")
-    print(total_data)
+    print(lol)
     
     print("checking conn")
     sock.sendall("state acknowledged".encode())

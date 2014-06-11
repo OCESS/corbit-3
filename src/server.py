@@ -155,7 +155,7 @@ while True:
         if not already_moved:
             entity.move(time_per_tick())
             
-    ticks_to_simulate -= 1
+    ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
     
     while ticks_to_simulate <= 0:
         if not connection_established:

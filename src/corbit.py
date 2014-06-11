@@ -11,13 +11,27 @@ import json
 # functions that would just clutter up the server.py and client.py files.
 # For example, corbit.Entity is in this namespace, so is corbit.load(file)
 
-def recvall(the_socket):
-    total_data = []
+def recvall(sock):
+    # total_data = b""
+    # while True:
+    #     chunk = the_socket.recv(8192)
+    #     if chunk==b"": print("empty"); break
+    #     total_data += chunk
+    # return total_data.decode()
+    end_marker = ";".encode()
+    total_data = b""
     while True:
-        chunk = the_socket.recv(8192)
-        if not chunk: break
-        total_data.append(chunk)
-    return ''.join(total_data)
+        chunk = sock.recv(8192)
+        if end_marker in chunk:
+            total_data += chunk[:chunk.find(end_marker)] # Add everything up to but not including the end marker
+            break
+        total_data += chunk
+        if len(total_data) > 1:
+            # Check if end_marker was split
+            last_pair = bytes([chunk[-2], chunk[-1]]) # last_pair is a byte string of the last two bytes in chunk
+            if end_marker in last_pair:
+                total_data[-2] = last_pair[:last_pair.find(end_marker) - 1]
+    return total_data.decode()
 
 class Camera:
     "Used to store the zoom level and position of the display's camera"
