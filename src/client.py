@@ -47,19 +47,6 @@ def print_text(text, font, gap, line_number, display):
     display.blit(label, (gap[0], gap[1] * line_number))
     return line_number + 1
 
-def auto_SI_prefix(value, base_unit):
-    """Disclaimer, designed for when meters are in the numerator"""
-
-    value = value.matchUnits(base_unit)
-
-    if 0 <= abs(value.asNumber()) < 1000**1:
-        return value.matchUnits(base_unit)
-    elif 1000**1 <= abs(value.asNumber()) < 1000**2:
-        # unit_str =
-        # return value.matchUnits(eval)
-        pass
-
-
 def draw(display):
     line_number = 1
     gap = [10,10]
@@ -128,7 +115,6 @@ while True:
             elif event.unicode == "r":
                 commands_to_send += "open|../res/OCESS.json "
 
-    corbit.sendall("ACKnowledge connection", sock)
     # print(corbit.recvall(sock))
 
     # print(commands_to_send)

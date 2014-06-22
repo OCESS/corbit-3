@@ -9,6 +9,7 @@ import itertools
 from math import sin,cos,atan2,pi
 import socket
 import threading
+import copy
 
 print("Corbit SERVER " + __version__)
 
@@ -21,9 +22,7 @@ def time_per_tick():
 
 G = 6.6720E-11 * N*m**2/kg**2
 PORT = 3141
-
-
-
+ADDRESS = "localhost"
 
 def accelerate_time(amount):
     "Increases how much time is simulated per tick of the server program"
@@ -97,24 +96,59 @@ def fire_vernier_thrusters(name, amount):
 with open("../res/OCESS.json", "r") as loadfile:
     entities = corbit.load(loadfile)
 
-def exit_handler():
-    serversocket.close()
-atexit.register(exit_handler)
-
 serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serversocket.bind((socket.gethostname(), PORT))
 serversocket.listen(5)
 pilot_commands = ""
-def pilot_server_thread():
+# import socketserver
+#
+# class PilotingServer(socketserver.ThreadingTCPServer):
+#     allow_reuse_address = True
+#
+# class PilotingServerHandler(socketserver.BaseRequestHandler):
+#     def handle(self):
+#         global pilot_commands
+#         global entities
+#         try:
+#             pilot_commands = self.request.recv(1024).decode("UTF-8").strip()
+#             print("got commands:", pilot_commands)
+#             self.request.sendall(corbit.json_serialize(entities).encode("UTF-8"))
+#         except Exception as e:
+#             print("Exception on piloting connection", e)
+#
+# piloting_server = PilotingServer((ADDRESS, PORT), PilotingServerHandler)
+# piloting_server_thread = threading.Thread(target = piloting_server.serve_forever)
+# piloting_server_thread.start()
+pilot_commands_lock = threading.Lock()
+def piloting_server():
     global pilot_commands
+    global pilot_commands_lock
+    global entities
+    connected = False
+
+    print("waiting for conn")
     pilot_socket, addr = serversocket.accept()
     print("Connection from pilot", addr)
-    pilot_commands = corbit.recvall(pilot_socket)
-    print("got commands:", pilot_commands)
-    corbit.sendall(corbit.json_serialize(entities), pilot_socket)
+    connected = True
+    # print("1")
+    while connected:
+        # print("loop")
+        pilot_commands_lock.acquire()
+        pilot_commands = corbit.recvall(pilot_socket)
+        pilot_commands_lock.release()
+        # print("got commands:", pilot_commands)
+        if not corbit.sendall(corbit.json_serialize(entities), pilot_socket):
+            print("connect off")
+            connected = False
 
+piloting_server_thread = threading.Thread(target = piloting_server)
+piloting_server_thread.start()
 
-ticks_to_simulate = 0
+def exit_handler():
+    serversocket.close()
+atexit.register(exit_handler)
+
+ticks_to_simulate = 1
 def ticker():
     global ticks_to_simulate
     ticks_to_simulate += 1
@@ -124,6 +158,8 @@ ticker()
 
 
 while True:
+
+    start_time = time.time()
 
     #    for A, B in itertools.combinations(entities, 2):
     #        gravity = corbit.gravitational_force(A, B)
@@ -145,39 +181,22 @@ while True:
         
         if not already_moved:
             entity.move(time_per_tick())
-            
-    ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
-    
-    # while ticks_to_simulate <= 0:
-    #     if not connection_established:
-    #         try:
-    #             clientsocket, address = serversocket.accept()
-    #             connection_established = True
-    #         except socket.error:
-    #             None
-    #     else:
-    #         if corbit.recvall(clientsocket) == "ACKnowledge connection":
-    #             connection_established = True
-    #         if not corbit.sendall("connection ACKnowledged", clientsocket):
-    #             connection_established = False
-    #             print("client is deaf")
-    #             break
-    #
-    #         commands = corbit.recvall(clientsocket)
-    #         print("got commands")
-    #         print(commands)
-    #
-    #         if not corbit.sendall(corbit.json_serialize(entities), clientsocket):
-    #             connection_established = False
-    #             break
 
-    if pilot_commands != "":
-        print(pilot_commands.split(" "))
-        for command in pilot_commands.split(" "):
+    # Only wait until this tick is almost done
+    pilot_commands_copy = ""
+    if pilot_commands_lock.acquire(timeout = time_per_tick().asNumber(s) - 0.8 * (time.time() - start_time)):
+        pilot_commands_copy = copy.copy(pilot_commands)
+    else:
+        pass    # Skip acting on commands for this tick
+    if pilot_commands_copy != "":
+        print("'" + pilot_commands_copy + "'")
+        print(pilot_commands_copy.split(" "))
+        for command in pilot_commands_copy.split(" "):
+            print(command)
             function, argument = command.split("|")[0], command.split("|")[1]
             if len(command.split("|")) != 2:
                 print("Malformed command, should have exactly one '|':",command)
-            elif function == "fire_verniers":
+            elif function == "fire_vernies":
                 if len(argument.split(",")) != 2:
                     print("Malformed argument, should have exactly one ',':",command)
                 else:
@@ -208,6 +227,15 @@ while True:
                     filename = argument
                     with open(filename, "r") as loadfile:
                         entities = corbit.load(loadfile)
+    pilot_commands_lock.release()
+
+    ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
+    print(ticks_to_simulate)
+    if ticks_to_simulate <= 0:
+        print("sleepy time")
+        print(time.time() - start_time)
+        # The 1.1 is in there because time.time() isn't accurate, and it's better to overshoot than undershoot
+        time.sleep(time_per_tick().asNumber(s) - 0.8 * (time.time() - start_time))
 
 
 

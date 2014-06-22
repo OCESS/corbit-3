@@ -13,7 +13,7 @@ import json
 
 def sendall(msg, sock):
     try:
-        sock.sendall((msg + ";").encode())
+        sock.sendall((msg + ";").encode("UTF-8"))
     except BrokenPipeError:
         print("Tried sending")
         print(msg)
@@ -28,7 +28,7 @@ def recvall(sock):
     #     if chunk==b"": print("empty"); break
     #     total_data += chunk
     # return total_data.decode()
-    end_marker = ";".encode()
+    end_marker = ";".encode("UTF-8")
     total_data = b""
     while True:
         chunk = sock.recv(8192)
@@ -43,7 +43,7 @@ def recvall(sock):
                 total_data[-2] = last_pair[:last_pair.find(end_marker) - 1]
         if chunk == b"":
             break
-    return total_data.decode()
+    return total_data.decode("UTF-8")
 
 class Camera:
     "Used to store the zoom level and position of the display's camera"
@@ -192,7 +192,8 @@ def load(input_stream):
                                         fuel, rcs_fuel))
 
     except KeyError:
-        print("no habitats found")
+        # print("no habitats found")
+        pass
     return json_entities
 
 
