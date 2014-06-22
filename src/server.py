@@ -23,26 +23,9 @@ G = 6.6720E-11 * N*m**2/kg**2
 PORT = 3141
 
 
-serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-serversocket.setblocking(False)
-
-serversocket.bind((socket.gethostname(), PORT))
 
 
-def distance(A, B):
-    return m * linalg.norm((A.displacement - B.displacement).asNumber(m))
-
-def angle(A, B):
-    return atan2((B.displacement[1] - A.displacement[1]),
-                      (B.displacement[0] - A.displacement[0]))
-    
-def gravitational_force(A, B):
-    unit_distance = array([cos(angle(A,B)), sin(angle(A,B))])
-    return G * A.mass() * B.mass() / distance(A,B)**2 * unit_distance
-
-
-
-def accelerate_time(self, amount):
+def accelerate_time(amount):
     "Increases how much time is simulated per tick of the server program"
     global time_acc_index
     global time_acceleration
@@ -114,14 +97,22 @@ def fire_vernier_thrusters(name, amount):
 with open("../res/OCESS.json", "r") as loadfile:
     entities = corbit.load(loadfile)
 
-serversocket.setblocking(False)
-serversocket.listen(5)
-connection_established = False
-
 def exit_handler():
     serversocket.close()
-
 atexit.register(exit_handler)
+
+serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serversocket.bind((socket.gethostname(), PORT))
+serversocket.listen(5)
+pilot_commands = ""
+def pilot_server_thread():
+    global pilot_commands
+    pilot_socket, addr = serversocket.accept()
+    print("Connection from pilot", addr)
+    pilot_commands = corbit.recvall(pilot_socket)
+    print("got commands:", pilot_commands)
+    corbit.sendall(corbit.json_serialize(entities), pilot_socket)
+
 
 ticks_to_simulate = 0
 def ticker():
@@ -134,10 +125,8 @@ ticker()
 
 while True:
 
-    commands = ""
-
     #    for A, B in itertools.combinations(entities, 2):
-    #        gravity = gravitational_force(A, B)
+    #        gravity = corbit.gravitational_force(A, B)
     #        theta = angle(A, B)
     #        A.accelerate(gravity, theta)
     #        B.accelerate(-gravity, theta)
@@ -159,32 +148,32 @@ while True:
             
     ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
     
-    while ticks_to_simulate <= 0:
-        if not connection_established:
-            try:
-                clientsocket, address = serversocket.accept()
-                connection_established = True
-            except socket.error:
-                None
-        else:
-            if corbit.recvall(clientsocket) == "ACKnowledge connection":
-                connection_established = True
-            if not corbit.sendall("connection ACKnowledged", clientsocket):
-                connection_established = False
-                print("client is deaf")
-                break
+    # while ticks_to_simulate <= 0:
+    #     if not connection_established:
+    #         try:
+    #             clientsocket, address = serversocket.accept()
+    #             connection_established = True
+    #         except socket.error:
+    #             None
+    #     else:
+    #         if corbit.recvall(clientsocket) == "ACKnowledge connection":
+    #             connection_established = True
+    #         if not corbit.sendall("connection ACKnowledged", clientsocket):
+    #             connection_established = False
+    #             print("client is deaf")
+    #             break
+    #
+    #         commands = corbit.recvall(clientsocket)
+    #         print("got commands")
+    #         print(commands)
+    #
+    #         if not corbit.sendall(corbit.json_serialize(entities), clientsocket):
+    #             connection_established = False
+    #             break
 
-            commands = corbit.recvall(clientsocket)
-            print("got commands")
-            print(commands)
-            
-            if not corbit.sendall(corbit.json_serialize(entities), clientsocket):
-                connection_established = False
-                break
-
-    if commands != "":
-        print(commands.split(" "))
-        for command in commands.split(" "):
+    if pilot_commands != "":
+        print(pilot_commands.split(" "))
+        for command in pilot_commands.split(" "):
             function, argument = command.split("|")[0], command.split("|")[1]
             if len(command.split("|")) != 2:
                 print("Malformed command, should have exactly one '|':",command)

@@ -39,20 +39,39 @@ while attempts != 0:
 camera = corbit.Camera(1, "AC")
 
 def print_text(text, font, gap, line_number, display):
+    try:
+        round(text, 1)
+    except TypeError:
+        pass
     label = font.render(text, 1, (200,200,200))
     display.blit(label, (gap[0], gap[1] * line_number))
     return line_number + 1
+
+def auto_SI_prefix(value, base_unit):
+    """Disclaimer, designed for when meters are in the numerator"""
+
+    value = value.matchUnits(base_unit)
+
+    if 0 <= abs(value.asNumber()) < 1000**1:
+        return value.matchUnits(base_unit)
+    elif 1000**1 <= abs(value.asNumber()) < 1000**2:
+        # unit_str =
+        # return value.matchUnits(eval)
+        pass
+
 
 def draw(display):
     line_number = 1
     gap = [10,10]
     pygame.draw.circle(display, (150,150,150), (10,10), 10)
     display_font = pygame.font.SysFont("monospace", 15)
-    line_number = print_text("here we go here we go here we go",
-                             display_font, gap, line_number, display)
-    line_number = print_text("here we go here we go here we go",
-                             display_font, gap, line_number, display)
-    
+
+    alt = corbit.altitude(corbit.find_entity("AC", entities), corbit.find_entity("AC A", entities)).asNumber(m)
+    alt_text = str(corbit.altitude(corbit.find_entity("AC", entities), corbit.find_entity("AC A", entities)))
+    line_number = print_text(alt_text, display_font, gap, line_number, display)
+
+
+
 
 while True:
     
@@ -110,9 +129,9 @@ while True:
                 commands_to_send += "open|../res/OCESS.json "
 
     corbit.sendall("ACKnowledge connection", sock)
-    print(corbit.recvall(sock))
+    # print(corbit.recvall(sock))
 
-    print(commands_to_send)
+    # print(commands_to_send)
     corbit.sendall(commands_to_send.strip(), sock)
 
     entities = corbit.load(corbit.recvall(sock))

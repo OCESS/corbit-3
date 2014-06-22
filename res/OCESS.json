@@ -9,7 +9,7 @@
             ],
             "displacement": [
                 -100,
-                -75
+                0
             ],
             "velocity": [
                 0,
@@ -39,8 +39,8 @@
                 -75
             ],
             "velocity": [
-                15,
-                -2
+                1500,
+                -20
             ],
             "acceleration": [
                 0,

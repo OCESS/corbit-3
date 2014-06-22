@@ -351,6 +351,19 @@ class Habitat(Entity):
         Entity.move(self, time)
 
 
+def distance(A, B):
+    return m * LA.norm((A.displacement - B.displacement).asNumber(m))
+
+def altitude(A, B):
+    return distance(A, B) - A.radius - B.radius
+
+def angle(A, B):
+    return atan2((B.displacement[1] - A.displacement[1]),
+                 (B.displacement[0] - A.displacement[0]))
+
+def gravitational_force(A, B):
+    unit_distance = array([cos(angle(A,B)), sin(angle(A,B))])
+    return G * A.mass() * B.mass() / distance(A,B)**2 * unit_distance
 
 def resolve_collision(A, B, time):
     # general overview of this function:
@@ -371,23 +384,23 @@ def resolve_collision(A, B, time):
     
     # this code finds when the the two entities will collide. See
     # http://www.gvu.gatech.edu/people/official/jarek/graphics/material/collisionsDeshpandeKharsikarPrabhu.pdf
-    # for how I got the algorithm    
+    # for how I got the algorithm
     a = m**2/s**2 * LA.norm(velocity.asNumber(m/s))**2
     b = m**2/s * 2 * scipy.dot(displacement.asNumber(m), velocity.asNumber(m/s))
     c = m**2 * LA.norm(displacement.asNumber(m))**2 - radius_sum**2
-    
+
     try:
         t_to_impact = \
          (-b - m**2/s * sqrt((b**2 - 4*a*c).asNumber(m**4/s**2)))/(2*a)
     except:
         return
-        
+
     if not scipy.isfinite(t_to_impact.asNumber(s)):
         return
-    
+
     if t_to_impact > time or t_to_impact < 0 * s:
         return
-    
+
     # at this point, we know there is a collision
     print("Collision:", A.name, "and", B.name, "in", t_to_impact)
 
@@ -397,7 +410,7 @@ def resolve_collision(A, B, time):
 
     n = displacement   # normal vector
     un = n / (m*LA.norm(n.asNumber(m))) # normal unit vector
-    unt = deepcopy(un);           # normal tangent vector
+    unt = deepcopy(un)           # normal tangent vector
     unt[0], unt[1] = \
     -unt[1], unt[0]
     
