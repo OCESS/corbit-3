@@ -7,24 +7,26 @@
                 255,
                 0
             ],
-            "mass": 2000000000000000.0,
-            "radius": 13,
             "displacement": [
-                350,
-                350
+                -100,
+                -60
             ],
             "velocity": [
-                0.0,
-                0.0
+                0,
+                0
             ],
             "acceleration": [
-                0.0,
-                0.0
+                0,
+                0
             ],
-            "angular_displacement": 21.0,
-            "angular_velocity": 22.0,
-            "angular_acceleration": 23.0
-        },
+            "mass": 100,
+            "radius": 13,
+            "angular_position": 21,
+            "angular_speed": 22,
+            "angular_acceleration": 23
+        }
+    ],
+    "habitats": [
         {
             "name": "AC",
             "color": [
@@ -32,23 +34,25 @@
                 0,
                 0
             ],
-            "mass": 2000,
-            "radius": 8,
             "displacement": [
-                463,
-                350
+                -180,
+                -75
             ],
             "velocity": [
-                0.0,
-                -30.0
+                1500,
+                -2
             ],
             "acceleration": [
-                0.0,
-                0.0
+                0,
+                0
             ],
-            "angular_displacement": 21.0,
-            "angular_velocity": 22.0,
-            "angular_acceleration": 23.0
+            "mass": 100,
+            "radius": 8,
+            "angular_position": 0,
+            "angular_speed": 0,
+            "angular_acceleration": 0,
+            "fuel": 1000,
+            "rcs_fuel": 100
         }
     ]
 }

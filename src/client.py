@@ -26,15 +26,16 @@ pygame.key.set_repeat(800,25)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.settimeout(8)
-attempts = 1
-while attempts != 0:
+connection_established = False
+while not connection_established is None:
+    print("Connecting to server...")
+    print(connection_established)
     try:
-        sock.connect((socket.gethostname(), PORT))
-        attempts = 0
-    except ConnectionRefusedError:
-        attempts += 1
-        if attempts > 50:
-            raise ConnectionAbortedError
+        connection_established = sock.connect((socket.gethostname(), PORT))
+    except (ConnectionRefusedError, ConnectionAbortedError) as e:
+        print(e)
+        print("Could not connect to server, retrying...")
+        time.sleep(1)
 
 camera = corbit.Camera(1, "AC")
 
@@ -56,8 +57,6 @@ def draw(display):
     alt = corbit.altitude(corbit.find_entity("AC", entities), corbit.find_entity("AC A", entities)).asNumber(m)
     alt_text = str(corbit.altitude(corbit.find_entity("AC", entities), corbit.find_entity("AC A", entities)))
     line_number = print_text(alt_text, display_font, gap, line_number, display)
-
-
 
 
 while True:
@@ -115,17 +114,15 @@ while True:
             elif event.unicode == "r":
                 commands_to_send += "open|../res/OCESS.json "
 
-    # print(corbit.recvall(sock))
-
     # print(commands_to_send)
     corbit.sendall(commands_to_send.strip(), sock)
 
     entities = corbit.load(corbit.recvall(sock))
 
-    #camera.move(1/fps)
-    #camera.update(entity(camera.center))
-    
-    ## Drawing routines here 
+    camera.move(1/fps)
+    camera.update(corbit.find_entity(camera.center, entities))
+
+    ## Drawing routines here
     for entity in entities:
         # calculating the on-screen position
         screen_position = \
@@ -141,7 +138,7 @@ while True:
          ]
         # calculating the on-screen radius
         screen_radius = int(entity.radius.asNumber() * camera.zoom_level)
-         
+
         if type(entity) == corbit.Entity:
             # entity drawing is the simplest, just a circle
             pygame.draw.circle(screen, entity.color,
@@ -162,16 +159,16 @@ while True:
               )
              ]
             )
-    
-    
+
+
     # flip the screen upside down, so that y values increase upwards
     screen.blit(pygame.transform.flip(screen, False, True), (0,0))
-    
+
     draw(screen)
-    
+
     pygame.display.flip()
     screen.fill((0, 0, 0))
-    
+
     #clock.tick(1/fps.asNumber(Hz))
     time.sleep(1/fps.asNumber(Hz))
     # time.sleep(1/fps.asNumber(Hz) - time_spent_on_last_frame)

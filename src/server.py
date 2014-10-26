@@ -92,6 +92,43 @@ def fire_vernier_thrusters(name, amount):
         #vernier_thrust_vector[0], vernier_thrust_vector[1] = \
         #-vernier_thrust_vector[1], vernier_thrust_vector[0]
 
+def act_on_piloting_commands(commands):
+    for command in pilot_commands_copy.split(" "):
+        print(command)
+        function, argument = command.split("|")[0], command.split("|")[1]
+        if len(command.split("|")) != 2:
+            print("Malformed command, should have exactly one '|':",command)
+        elif function == "fire_vernies":
+            if len(argument.split(",")) != 2:
+                print("Malformed argument, should have exactly one ',':",command)
+            else:
+                name, amount = argument.split(",")[0], float(argument.split(",")[1])
+                fire_vernier_thrusters(name, amount)
+        elif function == "change_engines":
+            if len(argument.split(",")) != 2:
+                print("Malformed argument, should have exactly one ',':",command)
+            else:
+                name, amount = argument.split(",")[0], float(argument.split(",")[1])
+                change_main_engines(name, amount)
+        elif function == "fire_rcs":
+            if len(argument.split(",")) != 2:
+                print("Malformed argument, should have exactly one ',':",command)
+            else:
+                name, direction = argument.split(",")[0], float(argument.split(",")[1])
+                fire_rcs_thrusters(name, direction)
+        elif function == "accelerate_time":
+            if len(argument.split(",")) != 1:
+                print("Malformed argument, should have exactly no ',':",command)
+            else:
+                amount = int(argument)
+                accelerate_time(amount)
+        elif function == "open":
+            if len(argument.split(",")) != 1:
+                print("Malformed argument, should have exactly no ',':",command)
+            else:
+                filename = argument
+                with open(filename, "r") as loadfile:
+                    entities = corbit.load(loadfile)
 
 with open("../res/OCESS.json", "r") as loadfile:
     entities = corbit.load(loadfile)
@@ -124,22 +161,20 @@ def piloting_server():
     global pilot_commands
     global pilot_commands_lock
     global entities
-    connected = False
 
-    print("waiting for conn")
+    print("listening for pilot connection")
     pilot_socket, addr = serversocket.accept()
     print("Connection from pilot", addr)
-    connected = True
-    # print("1")
-    while connected:
+    while True:
         # print("loop")
         pilot_commands_lock.acquire()
         pilot_commands = corbit.recvall(pilot_socket)
         pilot_commands_lock.release()
         # print("got commands:", pilot_commands)
         if not corbit.sendall(corbit.json_serialize(entities), pilot_socket):
-            print("connect off")
-            connected = False
+            print("relistening for pilot connection")
+            pilot_socket, addr = serversocket.accept()
+            print("Connection from pilot", addr)
 
 piloting_server_thread = threading.Thread(target = piloting_server)
 piloting_server_thread.start()
@@ -182,61 +217,23 @@ while True:
         if not already_moved:
             entity.move(time_per_tick())
 
-    # Only wait until this tick is almost done
+    # Only wait until this tick is almost done and there is nothing left to do
     pilot_commands_copy = ""
-    if pilot_commands_lock.acquire(timeout = time_per_tick().asNumber(s) - 0.8 * (time.time() - start_time)):
+    if pilot_commands_lock.acquire():
         pilot_commands_copy = copy.copy(pilot_commands)
+        pilot_commands_lock.release()
     else:
         pass    # Skip acting on commands for this tick
     if pilot_commands_copy != "":
         print("'" + pilot_commands_copy + "'")
         print(pilot_commands_copy.split(" "))
-        for command in pilot_commands_copy.split(" "):
-            print(command)
-            function, argument = command.split("|")[0], command.split("|")[1]
-            if len(command.split("|")) != 2:
-                print("Malformed command, should have exactly one '|':",command)
-            elif function == "fire_vernies":
-                if len(argument.split(",")) != 2:
-                    print("Malformed argument, should have exactly one ',':",command)
-                else:
-                    name, amount = argument.split(",")[0], float(argument.split(",")[1])
-                    fire_vernier_thrusters(name, amount)
-            elif function == "change_engines":
-                if len(argument.split(",")) != 2:
-                    print("Malformed argument, should have exactly one ',':",command)
-                else:
-                    name, amount = argument.split(",")[0], float(argument.split(",")[1])
-                    change_main_engines(name, amount)
-            elif function == "fire_rcs":
-                if len(argument.split(",")) != 2:
-                    print("Malformed argument, should have exactly one ',':",command)
-                else:
-                    name, direction = argument.split(",")[0], float(argument.split(",")[1])
-                    fire_rcs_thrusters(name, direction)
-            elif function == "accelerate_time":
-                if len(argument.split(",")) != 1:
-                    print("Malformed argument, should have exactly no ',':",command)
-                else:
-                    amount = int(argument)
-                    accelerate_time(amount)
-            elif function == "open":
-                if len(argument.split(",")) != 1:
-                    print("Malformed argument, should have exactly no ',':",command)
-                else:
-                    filename = argument
-                    with open(filename, "r") as loadfile:
-                        entities = corbit.load(loadfile)
-    pilot_commands_lock.release()
+        act_on_piloting_commands(pilot_commands_copy.split(" "))
+
 
     ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
-    print(ticks_to_simulate)
     if ticks_to_simulate <= 0:
-        print("sleepy time")
-        print(time.time() - start_time)
-        # The 1.1 is in there because time.time() isn't accurate, and it's better to overshoot than undershoot
+        # The 0.8 is in there because time.time() isn't accurate, and it's better to overshoot than undershoot
         time.sleep(time_per_tick().asNumber(s) - 0.8 * (time.time() - start_time))
-
 
 
 print("okay")

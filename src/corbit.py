@@ -1,4 +1,6 @@
 from unum.units import rad,m,s,kg,N
+
+import io
 from math import atan2,cos,sin,pi,sqrt
 import scipy
 import scipy.linalg as LA
@@ -12,6 +14,11 @@ import json
 # For example, corbit.Entity is in this namespace, so is corbit.load(stream)
 
 def sendall(msg, sock):
+    """Sends an entire string delimited in Corbit format (i.e. with ';')
+    :param msg: a string to be sent
+    :param sock: the socket object on which to be sent
+    :return: True if successful, False otherwise
+    """
     try:
         sock.sendall((msg + ";").encode("UTF-8"))
     except BrokenPipeError:
@@ -22,12 +29,10 @@ def sendall(msg, sock):
     return True
 
 def recvall(sock):
-    # total_data = b""
-    # while True:
-    #     chunk = the_socket.recv(8192)
-    #     if chunk==b"": print("empty"); break
-    #     total_data += chunk
-    # return total_data.decode()
+    """Receives an entire string delimited according to Corbit (i.e. with a ';')
+    :param sock: socket object on which to receive from
+    :return: the received string
+    """
     end_marker = ";".encode("UTF-8")
     total_data = b""
     while True:
@@ -46,8 +51,7 @@ def recvall(sock):
     return total_data.decode("UTF-8")
 
 class Camera:
-    "Used to store the zoom level and position of the display's camera"
-    
+    "Used to store the zoom level and position of the display's camera. Change this to change the viewpoint"
     def __init__(self, zoom_level, center=None):
         self.center = center
         if self.center == None:
@@ -90,17 +94,24 @@ class Camera:
 
 
 def find_entity(name, entities):
-    "Accesses the first entity specified by name"
+    """Accesses the first entity specified by name
+    :param name: string of the target object's name
+    :param entities: the list of entites in which to search in
+    :return: an Entity asked for
+    """
     for entity in entities:
         if entity.name == name:
             return entity
 
 
-def save(output_stream):
+def save(output_stream, entities):
+    """Dumps a list of entities into a JSON string in the a given stream
+    :param output_stream: the stream to dump to, e.g. can be a filestream
+    :param entities: the list of entities to dump
+    :return: None
+    """
     json_data = {}
     json_data["entities"] = []
-    
-    global entities
     
     for entity in entities:
         json_data["entities"].append(entity.dict_repr())
@@ -109,18 +120,29 @@ def save(output_stream):
               indent=4, sort_keys=False, separators=(",", ": "))
 
 def json_serialize(entities):
+    """Serializes a list of entities into a JSON string
+    :param entities: the list of entities to serialize
+    :return: the JSON string representation of the entities
+    """
     json_data = {}
     json_data["entities"] = []
-    
+    json_data["habitats"] = []
+
     for entity in entities:
-        json_data["entities"].append(entity.dict_repr())
-    
+        if type(entity) is Habitat:
+            json_data["habitats"].append(entity.dict_repr())
+        elif type(entity) is Entity:
+            json_data["entities"].append(entity.dict_repr())
+        else:
+            print("found something in entities list that isn't a recognized entity or derivative work,", entity.name)
+
     return json.dumps(json_data, separators=(",", ":"))                      
 
-import io
-
 def load(input_stream):
-    "Loads a list of entities when provided with JSON"
+    """Given a JSON string or a JSON stream of entities, parses into binary objects and returns
+    :param input_stream: string or stream of Corbit format to parse
+    :return: a list of entities
+    """
     if isinstance(input_stream, str):   # Converts strings to streams just like that
         input_stream = io.StringIO(input_stream)
     json_root = json.load(input_stream)
@@ -192,15 +214,14 @@ def load(input_stream):
                                         fuel, rcs_fuel))
 
     except KeyError:
-        # print("no habitats found")
-        pass
+        print("no habitats found")
     return json_entities
 
 
 
 class Entity:
     "Base class for all physical objects"
-            
+
     def __init__(self, name, color, mass, radius,
                  displacement, velocity, acceleration,
                  angular_position, angular_speed, angular_acceleration):
@@ -219,6 +240,7 @@ class Entity:
         self.angular_acceleration = angular_acceleration    # units: radians/s/s
     
     def mass(self):
+        "Getter function for mass, will be overriden in Entity-derived classes"
         return self.dry_mass
     
     def moment_of_inertia(self):
@@ -228,8 +250,8 @@ class Entity:
     def accelerate(self, force, angle):
         """
         Called when the entity is accelerated by a force
-        force: a cartesian force vector
-        angle: the angle on the entity that the force is applied onto.
+        :param force: a cartesian force vector
+        :param angle: the angle on the entity that the force is applied onto.
         An angle of zero would mean the force is applied on the front, while
         An angle of pi/2 would mean the force is applied on the left
         ("front" is where the entity is pointing, i.e. self.angular_position)
@@ -267,7 +289,9 @@ class Entity:
             #print(T)
         
     def move(self, time):
-        "Updates velocities, positions, and rotations for entity"
+        """Updates velocities, positions, and rotations for entity
+        :param time: the dt for the frame
+        """
         
         self.velocity += self.acceleration * time
         self.acceleration = m/s/s * array((0,0))
@@ -281,20 +305,17 @@ class Entity:
         "Returns a dictionary representation of the Entity"
         
         blob = collections.OrderedDict([
-        
-         ("name", self.name),
-         ("color", self.color),  
-         ("mass", self.mass().asNumber()),
-         ("radius", self.radius.asNumber()),
-         
-         ("displacement", self.displacement.asNumber().tolist()),
-         ("velocity", self.velocity.asNumber().tolist()),
-         ("acceleration", self.acceleration.asNumber().tolist()),
-         
-         ("angular_position", self.angular_position.asNumber()),
-         ("angular_speed", self.angular_speed.asNumber()),
-         ("angular_acceleration", self.angular_acceleration.asNumber())
-        
+            ("name", self.name),
+            ("color", self.color),
+            ("mass", self.mass().asNumber()),
+            ("radius", self.radius.asNumber()),
+            ("displacement", self.displacement.asNumber().tolist()),
+            ("velocity", self.velocity.asNumber().tolist()),
+            ("acceleration", self.acceleration.asNumber().tolist()),
+
+            ("angular_position", self.angular_position.asNumber()),
+            ("angular_speed", self.angular_speed.asNumber()),
+            ("angular_acceleration", self.angular_acceleration.asNumber())
         ])
         
         return blob
@@ -351,6 +372,13 @@ class Habitat(Entity):
         
         Entity.move(self, time)
 
+    def dict_repr(self):
+        blob = Entity.dict_repr(self)
+        blob.update(collections.OrderedDict ([
+            ("fuel", self.main_engines.fuel.asNumber()),
+            ("rcs_fuel", self.rcs.fuel.asNumber())
+        ]))
+        return blob
 
 def distance(A, B):
     return m * LA.norm((A.displacement - B.displacement).asNumber(m))
