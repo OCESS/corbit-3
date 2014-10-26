@@ -39,83 +39,39 @@ def accelerate_time(amount):
     
     time_acc_index += amount
 
-def accelerate(name, force, angle):
-    "Wrapper for accelerating entities, callable on a client machine"
-    global entities
-    for entity in entities:
-        if entity.name == name:
-            entity.accelerate(force, angle)
-
-def change_main_engines(name, increment):
-    "Changes the engine usage of the specified entity. Fails if no engines"
-    global entities
-    for entity in entities:
-        if entity.name == name:
-            entity.main_engines.usage += increment
-    
-def fire_rcs_thrusters(name, direction):
-    "Changes the rcs usage of the specified entity. Fails if no thrusters"
-    global entities
-    target = corbit.Entity
-    for entity in entities:
-        if entity.name == name:
-            target = entity
-    
-    rcs_thrust = target.rcs.thrust(time_per_tick())
-    theta = direction + target.angular_position
-    rcs_thrust_vector = \
-        N * array((cos(theta) * rcs_thrust.asNumber(), 
-                   sin(theta) * rcs_thrust.asNumber()))
-    for angle in target.rcs.engine_positions:
-        target.accelerate(
-            rcs_thrust_vector/len(target.rcs.engine_positions), angle)
-    
-def fire_vernier_thrusters(name, amount):
-    "Changes the vernier thrusters of the specified entity. Fails if none"
-    global entities
-    target = corbit.Entity
-    for entity in entities:
-        if entity.name == name:
-            target = entity
-   
-    vernier_thrust = target.rcs.thrust(time_per_tick())
-    vernier_thrust_vector = \
-        N * array((0, vernier_thrust.asNumber())) * amount
-    target.accelerate(vernier_thrust_vector, 0)
-    target.accelerate(-vernier_thrust_vector, pi)
-    #for angle in target.rcs.engine_positions:
-        #target.accelerate(
-            #vernier_thrust_vector/len(target.rcs.engine_positions), angle)
-        #print(vernier_thrust_vector,angle)
-        ## this code rotates the vernier_thrust_vector by pi/2, since to
-        ## rotate a vector, (x,y) = (-y, x)
-        #vernier_thrust_vector[0], vernier_thrust_vector[1] = \
-        #-vernier_thrust_vector[1], vernier_thrust_vector[0]
-
 def act_on_piloting_commands(commands):
+    global entities
+
     for command in pilot_commands_copy.split(" "):
-        print(command)
         function, argument = command.split("|")[0], command.split("|")[1]
         if len(command.split("|")) != 2:
             print("Malformed command, should have exactly one '|':",command)
-        elif function == "fire_vernies":
+        elif function == "fire_verniers":
             if len(argument.split(",")) != 2:
                 print("Malformed argument, should have exactly one ',':",command)
             else:
                 name, amount = argument.split(",")[0], float(argument.split(",")[1])
-                fire_vernier_thrusters(name, amount)
+                corbit.oneshot_vernier_thrusters(
+                    corbit.find_entity(name, entities), amount, time_per_tick())
         elif function == "change_engines":
             if len(argument.split(",")) != 2:
                 print("Malformed argument, should have exactly one ',':",command)
             else:
                 name, amount = argument.split(",")[0], float(argument.split(",")[1])
-                change_main_engines(name, amount)
+                corbit.find_entity(name, entities).main_engines.usage += amount
+
         elif function == "fire_rcs":
             if len(argument.split(",")) != 2:
                 print("Malformed argument, should have exactly one ',':",command)
             else:
                 name, direction = argument.split(",")[0], float(argument.split(",")[1])
-                fire_rcs_thrusters(name, direction)
+                target = corbit.find_entity(name, entities)
+                rcs_thrust = target.rcs.thrust(time_per_tick())
+                theta = direction + target.angular_position
+                rcs_thrust_vector = N * array((cos(theta) * rcs_thrust.asNumber(),
+                                    sin(theta) * rcs_thrust.asNumber()))
+                for angle in target.rcs.engine_positions:
+                    target.accelerate(rcs_thrust_vector/len(target.rcs.engine_positions), angle)
         elif function == "accelerate_time":
             if len(argument.split(",")) != 1:
                 print("Malformed argument, should have exactly no ',':",command)
@@ -225,8 +181,7 @@ while True:
     else:
         pass    # Skip acting on commands for this tick
     if pilot_commands_copy != "":
-        print("'" + pilot_commands_copy + "'")
-        print(pilot_commands_copy.split(" "))
+        print(pilot_commands_copy)
         act_on_piloting_commands(pilot_commands_copy.split(" "))
 
 

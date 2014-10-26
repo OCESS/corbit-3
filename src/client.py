@@ -126,50 +126,34 @@ while True:
     for entity in entities:
         # calculating the on-screen position
         screen_position = \
-         [
-          int(
+         [int(
            camera.zoom_level *
            (entity.displacement - camera.displacement).asNumber()[0]
            + screen_size[0]/2),
           int(
-           camera.zoom_level *
-           (entity.displacement - camera.displacement).asNumber()[1]
-           + screen_size[1]/2)
-         ]
+           camera.zoom_level * (entity.displacement - camera.displacement).asNumber()[1]
+           + screen_size[1]/2) ]
         # calculating the on-screen radius
         screen_radius = int(entity.radius.asNumber() * camera.zoom_level)
 
         if type(entity) == corbit.Entity:
             # entity drawing is the simplest, just a circle
-            pygame.draw.circle(screen, entity.color,
-                               screen_position, screen_radius)
+            pygame.draw.circle(screen, entity.color, screen_position, screen_radius)
         elif type(entity) == corbit.Habitat:
             # habitat is the entity drawing, but with a line pointing forwards
             pygame.draw.circle(screen, entity.color,
                                screen_position, screen_radius)
-            pygame.draw.aaline(screen, (0,255,0), screen_position,
-             [
-              int(
-               screen_position[0] +
-               screen_radius * cos(entity.angular_position)
-              ),
-              int(
-               screen_position[1] +
-               screen_radius * sin(entity.angular_position)
-              )
-             ]
-            )
+            pygame.draw.aaline(screen, (0, 255, 0), screen_position,
+             [int(screen_position[0] + screen_radius * cos(entity.angular_position)),
+              int(screen_position[1] + screen_radius * sin(entity.angular_position))])
 
 
     # flip the screen upside down, so that y values increase upwards
-    screen.blit(pygame.transform.flip(screen, False, True), (0,0))
-
+    screen.blit(pygame.transform.flip(screen, False, True), (0, 0))
     draw(screen)
-
     pygame.display.flip()
     screen.fill((0, 0, 0))
 
-    #clock.tick(1/fps.asNumber(Hz))
-    time.sleep(1/fps.asNumber(Hz))
+    #time.sleep(1/fps.asNumber(Hz))
     # time.sleep(1/fps.asNumber(Hz) - time_spent_on_last_frame)
 sock.close()
