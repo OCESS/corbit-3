@@ -302,7 +302,7 @@ class Entity:
         self.angular_position += self.angular_speed * time
     
     def dict_repr(self):
-        "Returns a dictionary representation of the Entity"
+        "Returns an ordered dictionary representation of the Entity"
         
         blob = collections.OrderedDict([
             ("name", self.name),
@@ -317,10 +317,11 @@ class Entity:
             ("angular_speed", self.angular_speed.asNumber()),
             ("angular_acceleration", self.angular_acceleration.asNumber())
         ])
-        
         return blob
          
 class Engine:
+    "Engine class, represents things like main habitat engines, habitat RCS systems, etc."
+
     def __init__(self, fuel, rated_fuel_flow, I_sp, engine_positions):
         self.fuel = fuel
         self.rated_fuel_flow = rated_fuel_flow
@@ -329,6 +330,10 @@ class Engine:
         self.usage = 0
     
     def thrust(self, time):
+        """Determines the thrust an engine gives out over a time interval
+        :param time: time interval over which engine is thrusting, in s
+        :return: total thrust, in N
+        """
         if self.fuel > (self.rated_fuel_flow * abs(self.usage)) * time:
             fuel_usage = self.rated_fuel_flow * self.usage
             self.fuel -= fuel_usage*sign(self.usage) * time
@@ -358,18 +363,17 @@ class Habitat(Entity):
         return self.dry_mass + self.rcs.fuel + self.main_engines.fuel
         
     def move(self, time):
-        "kind of a place holder function atm"
+        "Accelerates habitat from main engine thrust, then moves the habitat normally"
         
         thrust = self.main_engines.thrust(time)
         thrust_vector = \
-            N * array((cos(self.angular_position)*thrust.asNumber(),
-                       sin(self.angular_position)*thrust.asNumber()))
+            N * array((cos(self.angular_position)*thrust.asNumber(N),
+                       sin(self.angular_position)*thrust.asNumber(N)))
         for angle in self.main_engines.engine_positions:
             self.accelerate(
                 thrust_vector/len(self.main_engines.engine_positions),
                 angle + self.angular_position)
-        
-        
+
         Entity.move(self, time)
 
     def dict_repr(self):
@@ -395,6 +399,12 @@ def gravitational_force(A, B):
     return G * A.mass() * B.mass() / distance(A,B)**2 * unit_distance
 
 def resolve_collision(A, B, time):
+    """Detects and acts upon any collisions in the specified time interval between two entities
+    :param A: First entity
+    :param B: Second entity
+    :param time: time interval over which to check if any collisions occur
+    :return: None if no collision will occur in the timeframe, the two collided entities if there is a collision
+    """
     # general overview of this function:
     # 1. find if the objects will collide in the given time
     # 2. if yes, calculate collision:
@@ -476,15 +486,15 @@ def resolve_collision(A, B, time):
     VBt = vBt_ * unt
     
     # move until the point of impact
-    A.move(t_to_impact);
-    B.move(t_to_impact);
+    A.move(t_to_impact)
+    B.move(t_to_impact)
     
     # add em up to get v'
     A.velocity = VAn + VAt
     B.velocity = VBn + VBt
     
     # move for the rest of the frame
-    A.move(time - t_to_impact);
-    B.move(time - t_to_impact);
+    A.move(time - t_to_impact)
+    B.move(time - t_to_impact)
     
     return [A.name, B.name]
