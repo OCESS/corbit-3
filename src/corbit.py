@@ -1,11 +1,9 @@
 from unum.units import rad, m, s, kg, N
 
 import io
-from math import atan2, cos, sin, pi, sqrt
+import math
 import scipy
-import scipy.linalg as LA
-from scipy import array, sign
-from copy import deepcopy
+import copy
 import collections
 import json
 
@@ -62,9 +60,9 @@ class Camera:
         else:
             self.locked = True
 
-        self.displacement = m * array([0, 0])
-        self.velocity = m / s * array([0, 0])
-        self.acceleration = m / s / s * array([0, 0])
+        self.displacement = m * scipy.array([0, 0])
+        self.velocity = m / s * scipy.array([0, 0])
+        self.acceleration = m / s / s * scipy.array([0, 0])
 
         self.zoom_level = zoom_level
 
@@ -166,9 +164,9 @@ def load(input_stream):
                 mass = kg * entity["mass"]
                 radius = m * entity["radius"]
 
-                displacement = m * array(entity["displacement"])
-                velocity = m / s * array(entity["velocity"])
-                acceleration = m / s / s * array(entity["acceleration"])
+                displacement = m * scipy.array(entity["displacement"])
+                velocity = m / s * scipy.array(entity["velocity"])
+                acceleration = m / s / s * scipy.array(entity["acceleration"])
 
                 angular_position = rad * entity["angular_position"]
                 angular_speed = rad / s * entity["angular_speed"]
@@ -198,9 +196,9 @@ def load(input_stream):
                 mass = kg * habitat["mass"]
                 radius = m * habitat["radius"]
 
-                displacement = m * array(habitat["displacement"])
-                velocity = m / s * array(habitat["velocity"])
-                acceleration = m / s / s * array(habitat["acceleration"])
+                displacement = m * scipy.array(habitat["displacement"])
+                velocity = m / s * scipy.array(habitat["velocity"])
+                acceleration = m / s / s * scipy.array(habitat["acceleration"])
 
                 angular_position = rad * habitat["angular_position"]
                 angular_speed = rad / s * habitat["angular_speed"]
@@ -268,13 +266,13 @@ class Entity:
         # # angle = 0
         # # and the engines firing from the bottom of the hab will have
         # # angle = 3pi/2
-        F_theta = atan2(force[1].asNumber(), force[0].asNumber())
+        F_theta = math.atan2(force[1].asNumber(), force[0].asNumber())
 
         # a = F / m
         # # where
         # a is linear acceleration, m is mass of entity
         # F is the force that is used in making linear acceleration
-        F_cen = force * abs(cos(angle - F_theta))
+        F_cen = force * abs(math.cos(angle - F_theta))
         self.acceleration += F_cen / self.mass()
         # if LA.norm(F_cen.asNumber()) != 0:
         # print(F_cen)
@@ -284,9 +282,9 @@ class Entity:
         # w is angular acceleration in rad/s/s
         # T is torque in J/rad
         # I is moment of inertia in kg*m^2
-        #angle -= self.angular_position
-        T = N * LA.norm(force.asNumber()) \
-            * self.radius * sin(angle - F_theta)
+        # angle -= self.angular_position
+        T = N * scipy.linalg.norm(force.asNumber()) \
+            * self.radius * math.sin(angle - F_theta)
         self.angular_acceleration += T / self.moment_of_inertia()
         #if T != N*m * 0:
         #print(T)
@@ -297,7 +295,7 @@ class Entity:
         """
 
         self.velocity += self.acceleration * time
-        self.acceleration = m / s / s * array((0, 0))
+        self.acceleration = m / s / s * scipy.array((0, 0))
         self.displacement += self.velocity * time
 
         self.angular_speed += self.angular_acceleration * time
@@ -358,9 +356,9 @@ class Habitat(Entity):
                         displacement, velocity, acceleration,
                         angular_position, angular_speed, angular_acceleration)
 
-        self.main_engines = Engine(fuel, 100 * kg / s, 5000 * m / s, [pi])
+        self.main_engines = Engine(fuel, 100 * kg / s, 5000 * m / s, [math.pi])
         self.rcs = \
-            Engine(rcs_fuel, 5 * kg / s, 3000 * m / s, [0, pi / 2, pi, 3 * pi / 2])
+            Engine(rcs_fuel, 5 * kg / s, 3000 * m / s, [0, math.pi / 2, math.pi, 3 * math.pi / 2])
         self.rcs.usage = 1
 
     def mass(self):
@@ -371,8 +369,8 @@ class Habitat(Entity):
 
         thrust = self.main_engines.thrust(time)
         thrust_vector = \
-            N * array((cos(self.angular_position) * thrust.asNumber(N),
-                       sin(self.angular_position) * thrust.asNumber(N)))
+            N * scipy.array((math.cos(self.angular_position) * thrust.asNumber(N),
+                             math.sin(self.angular_position) * thrust.asNumber(N)))
         for angle in self.main_engines.engine_positions:
             self.accelerate(
                 thrust_vector / len(self.main_engines.engine_positions),
@@ -396,16 +394,16 @@ def oneshot_vernier_thrusters(entity, amount, time):
     :param time: time over which to thrust
     """
     for angle in entity.rcs.engine_positions:
-        print(amount * entity.rcs.thrust(time) * array(
-            (-sin(entity.angular_position + angle), cos(entity.angular_position + angle)))
+        print(amount * entity.rcs.thrust(time) * scipy.array(
+            (-math.sin(entity.angular_position + angle), math.cos(entity.angular_position + angle)))
               / len(entity.rcs.engine_positions), angle + entity.angular_position)
-        entity.accelerate(amount * entity.rcs.thrust(time) * array(
-            (-sin(entity.angular_position + angle), cos(entity.angular_position + angle)))
+        entity.accelerate(amount * entity.rcs.thrust(time) * scipy.array(
+            (-math.sin(entity.angular_position + angle), math.cos(entity.angular_position + angle)))
                           / len(entity.rcs.engine_positions), angle + entity.angular_position)
 
 
 def distance(A, B):
-    return m * LA.norm((A.displacement - B.displacement).asNumber(m))
+    return m * scipy.linalg.norm((A.displacement - B.displacement).asNumber(m))
 
 
 def altitude(A, B):
@@ -413,12 +411,12 @@ def altitude(A, B):
 
 
 def angle(A, B):
-    return atan2((B.displacement[1] - A.displacement[1]),
+    return math.atan2((B.displacement[1] - A.displacement[1]),
                  (B.displacement[0] - A.displacement[0]))
 
 
 def gravitational_force(A, B):
-    unit_distance = array([cos(angle(A, B)), sin(angle(A, B))])
+    unit_distance = scipy.array([math.cos(angle(A, B)), math.sin(angle(A, B))])
     return G * A.mass() * B.mass() / distance(A, B) ** 2 * unit_distance
 
 
@@ -448,13 +446,13 @@ def resolve_collision(A, B, time):
     # this code finds when the the two entities will collide. See
     # http://www.gvu.gatech.edu/people/official/jarek/graphics/material/collisionsDeshpandeKharsikarPrabhu.pdf
     # for how I got the algorithm
-    a = m ** 2 / s ** 2 * LA.norm(velocity.asNumber(m / s)) ** 2
+    a = m ** 2 / s ** 2 * scipy.linalg.norm(velocity.asNumber(m / s)) ** 2
     b = m ** 2 / s * 2 * scipy.dot(displacement.asNumber(m), velocity.asNumber(m / s))
-    c = m ** 2 * LA.norm(displacement.asNumber(m)) ** 2 - radius_sum ** 2
+    c = m ** 2 * scipy.linalg.norm(displacement.asNumber(m)) ** 2 - radius_sum ** 2
 
     try:
         t_to_impact = \
-            (-b - m ** 2 / s * sqrt((b ** 2 - 4 * a * c).asNumber(m ** 4 / s ** 2))) / (2 * a)
+            (-b - m ** 2 / s * math.sqrt((b ** 2 - 4 * a * c).asNumber(m ** 4 / s ** 2))) / (2 * a)
     except:
         return
 
@@ -472,8 +470,8 @@ def resolve_collision(A, B, time):
     # since a ' (prime symbol) wouldn't work, I've replaced it with a _ in variable names
 
     n = displacement  # normal vector
-    un = n / (m * LA.norm(n.asNumber(m)))  # normal unit vector
-    unt = deepcopy(un)  # normal tangent vector
+    un = n / (m * scipy.linalg.norm(n.asNumber(m)))  # normal unit vector
+    unt = copy.deepcopy(un)  # normal tangent vector
     unt[0], unt[1] = \
         -unt[1], unt[0]
 

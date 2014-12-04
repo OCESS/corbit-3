@@ -1,12 +1,14 @@
+#!/bin/python3
+
 __version__ = "3.0.0"
 import corbit
-from scipy import array, linalg
+import scipy
 import json
-from unum.units import N,m,s,kg,rad,Hz
+import unum.units
 import atexit
 import time
 import itertools
-from math import sin,cos,atan2,pi
+import math
 import socket
 import threading
 import copy
@@ -18,9 +20,9 @@ entities = []   # This object stores a list of all entities
 time_acc_index = 0
 time_acceleration = [1, 5, 10, 50, 100, 1000, 10000, 100000]
 def time_per_tick():
-    return time_acceleration[time_acc_index] / (60*Hz)
+    return time_acceleration[time_acc_index] / (60*unum.units.Hz)
 
-G = 6.6720E-11 * N*m**2/kg**2
+G = 6.6720E-11 * unum.units.N*unum.units.m**2/unum.units.kg**2
 PORT = 3141
 ADDRESS = "localhost"
 
@@ -28,7 +30,7 @@ def accelerate_time(amount):
     "Increases how much time is simulated per tick of the server program"
     global time_acc_index
     global time_acceleration
-    
+
     if time_acc_index + amount < 0:
         return
     try:
@@ -36,7 +38,7 @@ def accelerate_time(amount):
         print(time_acc_index + amount)
     except IndexError:
         return
-    
+
     time_acc_index += amount
 
 def act_on_piloting_commands(commands):
@@ -68,8 +70,8 @@ def act_on_piloting_commands(commands):
                 target = corbit.find_entity(name, entities)
                 rcs_thrust = target.rcs.thrust(time_per_tick())
                 theta = direction + target.angular_position
-                rcs_thrust_vector = N * array((cos(theta) * rcs_thrust.asNumber(),
-                                    sin(theta) * rcs_thrust.asNumber()))
+                rcs_thrust_vector = unum.units.N * scipy.array((math.cos(theta) * rcs_thrust.asNumber(),
+                                    math.sin(theta) * rcs_thrust.asNumber()))
                 for angle in target.rcs.engine_positions:
                     target.accelerate(rcs_thrust_vector/len(target.rcs.engine_positions), angle)
         elif function == "accelerate_time":
@@ -143,7 +145,7 @@ ticks_to_simulate = 1
 def ticker():
     global ticks_to_simulate
     ticks_to_simulate += 1
-    threading.Timer(time_per_tick().asNumber(s), ticker).start()
+    threading.Timer(time_per_tick().asNumber(unum.units.s), ticker).start()
 
 ticker()
 
@@ -163,13 +165,13 @@ while True:
         affected_objects = corbit.resolve_collision(A, B, time_per_tick())
         if affected_objects != None:
             collisions += affected_objects
-    
+
     for entity in entities:
         already_moved = False
         for name in collisions:
             if entity.name == name:
                 already_moved = True
-        
+
         if not already_moved:
             entity.move(time_per_tick())
 
@@ -188,7 +190,8 @@ while True:
     ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
     if ticks_to_simulate <= 0:
         # The 0.8 is in there because time.time() isn't accurate, and it's better to overshoot than undershoot
-        time.sleep(time_per_tick().asNumber(s) - 0.8 * (time.time() - start_time))
+        time.sleep(time_per_tick().asNumber(unum.units.s) - 0.8 * (time.time() - start_time))
+        #todo sleep time must be non-negative sometimes fails
 
 
 print("okay")

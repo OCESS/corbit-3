@@ -1,16 +1,18 @@
+#!/bin/python3
+
 __version__ = "3.0.0"
 import corbit
 import sys      # used to exit the program
 import pygame   # used for drawing and a couple other things
 from pygame.locals import *     # so I don't have to type out KB_LEFT, etc
-from unum.units import m,s,Hz,N # physical units that are used
-from scipy import array         # scipy.array is what I represent a vector
-from math import sin,cos,pi
+import unum.units
+import scipy
+import math
 import socket                   # used to communicate with the server
 import time
 
 print("Corbit PILOT " + __version__)
-fps = 60 * Hz
+fps = 60 * unum.units.Hz
 entities = []                   # this list will store all the entities
 PORT = 3141
 
@@ -54,15 +56,15 @@ def draw(display):
     pygame.draw.circle(display, (150,150,150), (10,10), 10)
     display_font = pygame.font.SysFont("monospace", 15)
 
-    alt = corbit.altitude(corbit.find_entity("AC", entities), corbit.find_entity("AC A", entities)).asNumber(m)
+    alt = corbit.altitude(corbit.find_entity("AC", entities), corbit.find_entity("AC A", entities)).asNumber(unum.units.m)
     alt_text = str(corbit.altitude(corbit.find_entity("AC", entities), corbit.find_entity("AC A", entities)))
     line_number = print_text(alt_text, display_font, gap, line_number, display)
 
 
 while True:
-    
+
     commands_to_send = ""
-    
+
     for event in pygame.event.get():
         if event.type == QUIT:
             sys.exit()
@@ -75,14 +77,14 @@ while True:
                 camera.locked = not camera.locked
                 print("locked=",camera.locked)
             elif event.key == K_LEFT:
-                camera.pan(m/s/s * array((-1, 0)))
+                camera.pan(unum.units.m/unum.units.s/unum.units.s * scipy.array((-1, 0)))
             elif event.key == K_RIGHT:
-                camera.pan(m/s/s * array((1, 0)))
+                camera.pan(unum.units.m/unum.units.s/unum.units.s * scipy.array((1, 0)))
             elif event.key == K_UP:
-                camera.pan(m/s/s * array((0, 1)))
+                camera.pan(unum.units.m/unum.units.s/unum.units.s * scipy.array((0, 1)))
             elif event.key == K_DOWN:
-                camera.pan(m/s/s * array((0, -1)))
-            
+                camera.pan(unum.units.m/unum.units.s/unum.units.s * scipy.array((0, -1)))
+
             elif event.unicode == "a":
                 commands_to_send += "fire_verniers|AC,-1 "
             elif event.unicode == "d":
@@ -91,26 +93,26 @@ while True:
                 commands_to_send += "change_engines|AC,0.01 "
             elif event.unicode == "s":
                 commands_to_send += "change_engines|AC,-0.01 "
-            
+
             elif event.unicode == "W":
                 commands_to_send += "fire_rcs|AC,0 "
             elif event.unicode == "A":
-                commands_to_send += "fire_rcs|AC," + str(pi/2) + " "
+                commands_to_send += "fire_rcs|AC," + str(math.pi/2) + " "
             elif event.unicode == "S":
-                commands_to_send += "fire_rcs|AC," + str(pi) + " "
+                commands_to_send += "fire_rcs|AC," + str(math.pi) + " "
             elif event.unicode == "D":
-                commands_to_send += "fire_rcs|AC," + str(-pi/2) + " "
-                
+                commands_to_send += "fire_rcs|AC," + str(-math.pi/2) + " "
+
             elif event.unicode == "-":
                 camera.zoom(-0.1)
             elif event.unicode == "+":
                 camera.zoom(0.1)
-            
+
             elif event.unicode == ".":
                 commands_to_send += "accelerate_time|1 "
             elif event.unicode == ",":
                 commands_to_send += "accelerate_time|-1 "
-            
+
             elif event.unicode == "r":
                 commands_to_send += "open|../res/OCESS.json "
 
@@ -144,8 +146,8 @@ while True:
             pygame.draw.circle(screen, entity.color,
                                screen_position, screen_radius)
             pygame.draw.aaline(screen, (0, 255, 0), screen_position,
-             [int(screen_position[0] + screen_radius * cos(entity.angular_position)),
-              int(screen_position[1] + screen_radius * sin(entity.angular_position))])
+             [int(screen_position[0] + screen_radius * math.cos(entity.angular_position)),
+              int(screen_position[1] + screen_radius * math.sin(entity.angular_position))])
 
 
     # flip the screen upside down, so that y values increase upwards
