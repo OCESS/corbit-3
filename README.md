@@ -18,14 +18,12 @@ Installation
 Project Structure
 -----------------
 
-`res/`			this directory contains all data files that Corbit can load  
+`corbit3/saves/`			this directory contains all data files that Corbit can load  
 `- OCESS.json`	the default data file that is loaded  
 
-`.project`		I develop this using PyDev, these are my project files  
-`.pydevproject`	see above  
-
-`src/`			this directory contains all the source files  
-`- server.py`		running this will start a headless server that is running Corbit, which loads OCESS.json by default  
-`- client.py`		running this will connect to a running instance of server.py, on the local machine. Then, it will tell the server to reload the default OCESS.json file  
-`- entity.py`		contains the class definitions for any physical objects. Entity is the base object, Habitat is derived from Entity  
-`- camera.py`		contains the calss definitions for the camera object, used by client.py to move the camera around
+`corbit3/corbit/`			this directory contains all the libraries that are written for this  
+`- physics`         for physics calculations, like “find distance between two objects”  
+`- objects`         definitions of all physical objects (eg `entity`), plus useful functions for operating on them (eg `find_entity`)  
+`- network`         network functions are in here. Use these to send and receive data between processes. E.g., `network.recv_all(socket)`  
+`server.py`     running this starts the server  
+`client.py`     running this starts the corbit pilot  
