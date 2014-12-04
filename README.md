@@ -1,5 +1,5 @@
 Corbit
-========
+======
 
 This is a spaceflight simulator, programmed in Python. This specific repo is the
 third major version of Corbit
@@ -8,10 +8,15 @@ third major version of Corbit
 Requirements
 ------------
 
-Corbit uses the SciPy stack, unum, Pyro4, PyGame and the Python standard library.
+By running `sudo python setup.py install` everything should be installed for you wow isn’t that cool
+
+Installation
+------------
+
+`sudo python setup.py install` installs the required libraries. Then, run `server.py` from `corbit3` and `client.py` from `corbit3`.
 
 Project Structure
---------------
+-----------------
 
 `res/`			this directory contains all data files that Corbit can load  
 `- OCESS.json`	the default data file that is loaded  
