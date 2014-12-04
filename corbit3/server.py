@@ -2,8 +2,10 @@
 
 __version__ = "3.0.0"
 import corbit
+from corbit.network import network
+from corbit.physics import physics
+from corbit.objects import objects
 import scipy
-import json
 import unum.units
 import atexit
 import time
@@ -71,7 +73,7 @@ def act_on_piloting_commands(commands):
                 rcs_thrust = target.rcs.thrust(time_per_tick())
                 theta = direction + target.angular_position
                 rcs_thrust_vector = unum.units.N * scipy.array((math.cos(theta) * rcs_thrust.asNumber(),
-                                    math.sin(theta) * rcs_thrust.asNumber()))
+                                                                math.sin(theta) * rcs_thrust.asNumber()))
                 for angle in target.rcs.engine_positions:
                     target.accelerate(rcs_thrust_vector/len(target.rcs.engine_positions), angle)
         elif function == "accelerate_time":
@@ -86,10 +88,10 @@ def act_on_piloting_commands(commands):
             else:
                 filename = argument
                 with open(filename, "r") as loadfile:
-                    entities = corbit.load(loadfile)
+                    entities = corbit.data.load(loadfile)
 
-with open("../res/OCESS.json", "r") as loadfile:
-    entities = corbit.load(loadfile)
+with open("saves/OCESS.json", "r") as loadfile:
+    entities = objects.load(loadfile)
 
 serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 serversocket.bind((socket.gethostname(), PORT))
@@ -126,10 +128,10 @@ def piloting_server():
     while True:
         # print("loop")
         pilot_commands_lock.acquire()
-        pilot_commands = corbit.recvall(pilot_socket)
+        pilot_commands = network.recvall(pilot_socket)
         pilot_commands_lock.release()
         # print("got commands:", pilot_commands)
-        if not corbit.sendall(corbit.json_serialize(entities), pilot_socket):
+        if not network.sendall(objects.json_serialize(entities), pilot_socket):
             print("relistening for pilot connection")
             pilot_socket, addr = serversocket.accept()
             print("Connection from pilot", addr)
@@ -139,7 +141,7 @@ piloting_server_thread.start()
 
 def exit_handler():
     serversocket.close()
-atexit.register(exit_handler)
+    atexit.register(exit_handler)
 
 ticks_to_simulate = 1
 def ticker():
@@ -162,7 +164,7 @@ while True:
 
     collisions = []
     for A, B in itertools.combinations(entities, 2):
-        affected_objects = corbit.resolve_collision(A, B, time_per_tick())
+        affected_objects = physics.resolve_collision(A, B, time_per_tick())
         if affected_objects != None:
             collisions += affected_objects
 
