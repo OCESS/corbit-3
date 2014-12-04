@@ -1,13 +1,11 @@
 #!/bin/python3
 
 __version__ = "3.0.0"
-import corbit
-from corbit.network import network
-from corbit.physics import physics
-from corbit.objects import objects
+import corbit.network
+import corbit.physics
+import corbit.objects
 import scipy
-import unum.units
-import atexit
+import unum.units as un
 import time
 import itertools
 import math
@@ -22,10 +20,10 @@ entities = []   # This object stores a list of all entities
 time_acc_index = 0
 time_acceleration = [1, 5, 10, 50, 100, 1000, 10000, 100000]
 def time_per_tick():
-    return time_acceleration[time_acc_index] / (60*unum.units.Hz)
+    return time_acceleration[time_acc_index] / (60*un.Hz)
 
-G = 6.6720E-11 * unum.units.N*unum.units.m**2/unum.units.kg**2
-PORT = 3141
+G = 6.6720E-11 * un.N*un.m**2/un.kg**2
+PORT = 3415
 ADDRESS = "localhost"
 
 def accelerate_time(amount):
@@ -55,24 +53,24 @@ def act_on_piloting_commands(commands):
                 print("Malformed argument, should have exactly one ',':",command)
             else:
                 name, amount = argument.split(",")[0], float(argument.split(",")[1])
-                corbit.oneshot_vernier_thrusters(
-                    corbit.find_entity(name, entities), amount, time_per_tick())
+                corbit.objects.oneshot_vernier_thrusters(
+                    corbit.objects.find_entity(name, entities), amount, time_per_tick())
         elif function == "change_engines":
             if len(argument.split(",")) != 2:
                 print("Malformed argument, should have exactly one ',':",command)
             else:
                 name, amount = argument.split(",")[0], float(argument.split(",")[1])
-                corbit.find_entity(name, entities).main_engines.usage += amount
+                corbit.objects.find_entity(name, entities).main_engines.usage += amount
 
         elif function == "fire_rcs":
             if len(argument.split(",")) != 2:
                 print("Malformed argument, should have exactly one ',':",command)
             else:
                 name, direction = argument.split(",")[0], float(argument.split(",")[1])
-                target = corbit.find_entity(name, entities)
+                target = corbit.objects.find_entity(name, entities)
                 rcs_thrust = target.rcs.thrust(time_per_tick())
                 theta = direction + target.angular_position
-                rcs_thrust_vector = unum.units.N * scipy.array((math.cos(theta) * rcs_thrust.asNumber(),
+                rcs_thrust_vector = un.N * scipy.array((math.cos(theta) * rcs_thrust.asNumber(),
                                                                 math.sin(theta) * rcs_thrust.asNumber()))
                 for angle in target.rcs.engine_positions:
                     target.accelerate(rcs_thrust_vector/len(target.rcs.engine_positions), angle)
@@ -88,39 +86,20 @@ def act_on_piloting_commands(commands):
             else:
                 filename = argument
                 with open(filename, "r") as loadfile:
-                    entities = corbit.data.load(loadfile)
+                    entities = corbit.objects.load(loadfile)
 
 with open("saves/OCESS.json", "r") as loadfile:
-    entities = objects.load(loadfile)
+    entities = corbit.objects.load(loadfile)
 
-serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-serversocket.bind((socket.gethostname(), PORT))
-serversocket.listen(5)
 pilot_commands = ""
-# import socketserver
-#
-# class PilotingServer(socketserver.ThreadingTCPServer):
-#     allow_reuse_address = True
-#
-# class PilotingServerHandler(socketserver.BaseRequestHandler):
-#     def handle(self):
-#         global pilot_commands
-#         global entities
-#         try:
-#             pilot_commands = self.request.recv(1024).decode("UTF-8").strip()
-#             print("got commands:", pilot_commands)
-#             self.request.sendall(corbit.json_serialize(entities).encode("UTF-8"))
-#         except Exception as e:
-#             print("Exception on piloting connection", e)
-#
-# piloting_server = PilotingServer((ADDRESS, PORT), PilotingServerHandler)
-# piloting_server_thread = threading.Thread(target = piloting_server.serve_forever)
-# piloting_server_thread.start()
 pilot_commands_lock = threading.Lock()
 def piloting_server():
     global pilot_commands
     global pilot_commands_lock
     global entities
+    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serversocket.bind((socket.gethostname(), PORT))
+    serversocket.listen(5)
 
     print("listening for pilot connection")
     pilot_socket, addr = serversocket.accept()
@@ -128,26 +107,30 @@ def piloting_server():
     while True:
         # print("loop")
         pilot_commands_lock.acquire()
-        pilot_commands = network.recvall(pilot_socket)
+        pilot_commands = corbit.network.recvall(pilot_socket)
         pilot_commands_lock.release()
         # print("got commands:", pilot_commands)
-        if not network.sendall(objects.json_serialize(entities), pilot_socket):
+        print(pilot_socket)
+        if not corbit.network.sendall(corbit.objects.json_serialize(entities), pilot_socket):
             print("relistening for pilot connection")
+            serversocket.close()
+            serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            serversocket.bind((socket.gethostname(), PORT))
+            serversocket.listen(5)
             pilot_socket, addr = serversocket.accept()
             print("Connection from pilot", addr)
+        else:
+            print("commands sent!")
 
 piloting_server_thread = threading.Thread(target = piloting_server)
 piloting_server_thread.start()
 
-def exit_handler():
-    serversocket.close()
-    atexit.register(exit_handler)
 
 ticks_to_simulate = 1
 def ticker():
     global ticks_to_simulate
     ticks_to_simulate += 1
-    threading.Timer(time_per_tick().asNumber(unum.units.s), ticker).start()
+    threading.Timer(time_per_tick().asNumber(un.s), ticker).start()
 
 ticker()
 
@@ -164,7 +147,7 @@ while True:
 
     collisions = []
     for A, B in itertools.combinations(entities, 2):
-        affected_objects = physics.resolve_collision(A, B, time_per_tick())
+        affected_objects = corbit.physics.resolve_collision(A, B, time_per_tick())
         if affected_objects != None:
             collisions += affected_objects
 
@@ -192,10 +175,8 @@ while True:
     ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
     if ticks_to_simulate <= 0:
         # The 0.8 is in there because time.time() isn't accurate, and it's better to overshoot than undershoot
-        time.sleep(time_per_tick().asNumber(unum.units.s) - 0.8 * (time.time() - start_time))
+        time.sleep(time_per_tick().asNumber(un.s) - 0.8 * (time.time() - start_time))
         #todo sleep time must be non-negative sometimes fails
 
 
 print("okay")
-
-exit_handler()
