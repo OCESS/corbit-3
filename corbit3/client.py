@@ -4,18 +4,18 @@ __version__ = "3.0.0"
 import corbit.physics
 import corbit.objects
 import corbit.network
-import sys      # used to exit the program
-import pygame   # used for drawing and a couple other things
-import pygame.locals as gui # for things like KB_LEFT
+import sys  # used to exit the program
+import pygame  # used for drawing and a couple other things
+import pygame.locals as gui  # for things like KB_LEFT
 import unum.units as un
 import scipy
 import math
-import socket                   # used to communicate with the server
+import socket  # used to communicate with the server
 import time
 
 print("Corbit PILOT " + __version__)
 fps = 60 * un.Hz
-entities = []                   # this list will store all the entities
+entities = []  # this list will store all the entities
 PORT = 3415
 
 # just setting up the display and window here
@@ -25,7 +25,7 @@ clock = pygame.time.Clock()
 display_flags = gui.RESIZABLE
 screen = pygame.display.set_mode(screen_size, display_flags)
 pygame.display.set_caption("Corbit " + __version__)
-pygame.key.set_repeat(800,25)
+pygame.key.set_repeat(800, 25)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.settimeout(8)
@@ -42,23 +42,25 @@ while not connection_established is None:
 
 camera = corbit.objects.Camera(1, "AC")
 
+
 def print_text(text, font, gap, line_number, display):
     try:
         round(text, 1)
     except TypeError:
         pass
-    label = font.render(text, 1, (200,200,200))
+    label = font.render(text, 1, (200, 200, 200))
     display.blit(label, (gap[0], gap[1] * line_number))
     return line_number + 1
 
+
 def draw(display):
     line_number = 1
-    gap = [10,10]
-    pygame.draw.circle(display, (150,150,150), (10,10), 10)
+    gap = [10, 10]
+    pygame.draw.circle(display, (150, 150, 150), (10, 10), 10)
     display_font = pygame.font.SysFont("monospace", 15)
 
     alt = corbit.physics.altitude(corbit.objects.find_entity("AC", entities),
-                           corbit.objects.find_entity("AC A", entities)).asNumber(un.m)
+                                  corbit.objects.find_entity("AC A", entities)).asNumber(un.m)
     alt_text = str(corbit.physics.altitude(
         corbit.objects.find_entity("AC", entities),
         corbit.objects.find_entity("AC A", entities)))
@@ -77,70 +79,70 @@ while True:
             screen_size = event.dict["size"]
             screen = pygame.display.set_mode(screen_size, display_flags)
             print(screen_size)
-            if pygame.key.get_focused() and event.type == gui.KEYDOWN:
-                if event.unicode == "\t":
-                    camera.locked = not camera.locked
-                    print("locked=",camera.locked)
-                elif event.key == gui.K_LEFT:
-                    camera.pan(un.m/un.s/un.s * scipy.array((-1, 0)))
-                elif event.key == gui.K_RIGHT:
-                    camera.pan(un.m/un.s/un.s * scipy.array((1, 0)))
-                elif event.key == gui.K_UP:
-                    camera.pan(un.m/un.s/un.s * scipy.array((0, 1)))
-                elif event.key == gui.K_DOWN:
-                    camera.pan(un.m/un.s/un.s * scipy.array((0, -1)))
 
-                elif event.unicode == "a":
-                    commands_to_send += "fire_verniers|AC,-1 "
-                elif event.unicode == "d":
-                    commands_to_send += "fire_verniers|AC,1 "
-                elif event.unicode == "w":
-                    commands_to_send += "change_engines|AC,0.01 "
-                elif event.unicode == "s":
-                    commands_to_send += "change_engines|AC,-0.01 "
+        if pygame.key.get_focused() and event.type == gui.KEYDOWN:
+            if event.unicode == "\t":
+                camera.locked = not camera.locked
+                print("locked=", camera.locked)
+            elif event.key == gui.K_LEFT:
+                camera.pan(un.m / un.s / un.s * scipy.array((-1, 0)))
+            elif event.key == gui.K_RIGHT:
+                camera.pan(un.m / un.s / un.s * scipy.array((1, 0)))
+            elif event.key == gui.K_UP:
+                camera.pan(un.m / un.s / un.s * scipy.array((0, 1)))
+            elif event.key == gui.K_DOWN:
+                camera.pan(un.m / un.s / un.s * scipy.array((0, -1)))
 
-                elif event.unicode == "W":
-                    commands_to_send += "fire_rcs|AC,0 "
-                elif event.unicode == "A":
-                    commands_to_send += "fire_rcs|AC," + str(math.pi/2) + " "
-                elif event.unicode == "S":
-                    commands_to_send += "fire_rcs|AC," + str(math.pi) + " "
-                elif event.unicode == "D":
-                    commands_to_send += "fire_rcs|AC," + str(-math.pi/2) + " "
+            elif event.unicode == "a":
+                commands_to_send += "fire_verniers|AC,-1 "
+            elif event.unicode == "d":
+                commands_to_send += "fire_verniers|AC,1 "
+            elif event.unicode == "w":
+                commands_to_send += "change_engines|AC,0.01 "
+            elif event.unicode == "s":
+                commands_to_send += "change_engines|AC,-0.01 "
 
-                elif event.unicode == "-":
-                    camera.zoom(-0.1)
-                elif event.unicode == "+":
-                    camera.zoom(0.1)
+            elif event.unicode == "W":
+                commands_to_send += "fire_rcs|AC,0 "
+            elif event.unicode == "A":
+                commands_to_send += "fire_rcs|AC," + str(math.pi / 2) + " "
+            elif event.unicode == "S":
+                commands_to_send += "fire_rcs|AC," + str(math.pi) + " "
+            elif event.unicode == "D":
+                commands_to_send += "fire_rcs|AC," + str(-math.pi / 2) + " "
 
-                elif event.unicode == ".":
-                    commands_to_send += "accelerate_time|1 "
-                elif event.unicode == ",":
-                    commands_to_send += "accelerate_time|-1 "
+            elif event.unicode == "-":
+                camera.zoom(-0.1)
+            elif event.unicode == "+":
+                camera.zoom(0.1)
 
-                elif event.unicode == "r":
-                    commands_to_send += "open|saves/OCESS.json "
+            elif event.unicode == ".":
+                commands_to_send += "accelerate_time|1 "
+            elif event.unicode == ",":
+                commands_to_send += "accelerate_time|-1 "
 
-    print(commands_to_send)
-    print(sock)
+            elif event.unicode == "r":
+                commands_to_send += "open|saves/OCESS.json "
+
+    if commands_to_send: print(commands_to_send)
     corbit.network.sendall(commands_to_send.strip(), sock)
 
     entities = corbit.objects.load(corbit.network.recvall(sock))
 
-    camera.move(1/fps)
+    camera.move(1 / fps)
     camera.update(corbit.objects.find_entity(camera.center, entities))
 
-    ## Drawing routines here
+    # # Drawing routines here
     for entity in entities:
         # calculating the on-screen position
         screen_position = \
             [int(
                 camera.zoom_level *
                 (entity.displacement - camera.displacement).asNumber()[0]
-                + screen_size[0]/2),
-                int(
-                    camera.zoom_level * (entity.displacement - camera.displacement).asNumber()[1]
-                    + screen_size[1]/2) ]
+                + screen_size[0] / 2),
+             int(
+                 camera.zoom_level * (entity.displacement - camera.displacement).asNumber()[1]
+                 + screen_size[1] / 2)]
         # calculating the on-screen radius
         screen_radius = int(entity.radius.asNumber() * camera.zoom_level)
 
@@ -164,4 +166,5 @@ while True:
 
     #time.sleep(1/fps.asNumber(Hz))
     # time.sleep(1/fps.asNumber(Hz) - time_spent_on_last_frame)
-    sock.close()
+
+sock.close()
