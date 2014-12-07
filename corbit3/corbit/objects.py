@@ -21,7 +21,9 @@ class Camera:
 
         self.zoom_level = zoom_level
 
+    # should the camera follow the centred object
     locked = True
+    # default speed, but this gets overwritten if it's locked to an object
     speed = 1e2
 
     def update(self, entity):

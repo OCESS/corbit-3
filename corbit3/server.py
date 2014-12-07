@@ -127,24 +127,28 @@ def piloting_server():
             pilot_socket, addr = serversocket.accept()
             print("Connection from pilot", addr)
         else:
-            print("commands sent!")
+            pass
 
 
 piloting_server_thread = threading.Thread(target=piloting_server)
 piloting_server_thread.start()
 
 ticks_to_simulate = 1
+
+
 def ticker():
     global ticks_to_simulate
     ticks_to_simulate += 1
     threading.Timer(time_per_tick().asNumber(un.s), ticker).start()
+
+
 ticker()
 
 while True:
     start_time = time.time()
 
     # for A, B in itertools.combinations(entities, 2):
-    #        gravity = corbit.physics.gravitational_force(A, B)
+    # gravity = corbit.physics.gravitational_force(A, B)
     #        theta = angle(A, B)
     #        A.accelerate(gravity, theta)
     #        B.accelerate(-gravity, theta)
@@ -177,8 +181,7 @@ while True:
 
     ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
     if ticks_to_simulate <= 0:
-        # The 0.8 is in there because time.time() isn't accurate, and it's better to overshoot than undershoot
-        time.sleep(time_per_tick().asNumber(un.s) - 0.8 * (time.time() - start_time))
-        #todo sleep time must be non-negative sometimes fails
+        time.sleep(max(time_per_tick().asNumber(un.s) - (time.time() - start_time),
+                       0))
 
-print("okay")
+

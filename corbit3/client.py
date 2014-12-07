@@ -23,6 +23,7 @@ screen_size = (681, 745)
 pygame.init()
 clock = pygame.time.Clock()
 display_flags = gui.RESIZABLE
+pygame.HWSURFACE = pygame.DOUBLEBUF = True  # wait for the screen to refresh before flipping the screen
 screen = pygame.display.set_mode(screen_size, display_flags)
 pygame.display.set_caption("Corbit " + __version__)
 pygame.key.set_repeat(800, 25)
@@ -40,8 +41,6 @@ while not connection_established is None:
         print("Could not connect to server, retrying...")
         time.sleep(1)
 
-camera = corbit.objects.Camera(1, "AC")
-
 
 def print_text(text, font, gap, line_number, display):
     try:
@@ -51,6 +50,10 @@ def print_text(text, font, gap, line_number, display):
     label = font.render(text, 1, (200, 200, 200))
     display.blit(label, (gap[0], gap[1] * line_number))
     return line_number + 1
+
+
+camera = corbit.objects.Camera(1, "AC")
+screen_size = screen.get_size()
 
 
 def draw(display):
@@ -77,6 +80,7 @@ while True:
 
         if event.type == gui.VIDEORESIZE:
             screen_size = event.dict["size"]
+            print(event.dict["size"])
             screen = pygame.display.set_mode(screen_size, display_flags)
             print(screen_size)
 
@@ -92,7 +96,6 @@ while True:
                 camera.pan(un.m / un.s / un.s * scipy.array((0, 1)))
             elif event.key == gui.K_DOWN:
                 camera.pan(un.m / un.s / un.s * scipy.array((0, -1)))
-
             elif event.unicode == "a":
                 commands_to_send += "fire_verniers|AC,-1 "
             elif event.unicode == "d":
@@ -101,7 +104,6 @@ while True:
                 commands_to_send += "change_engines|AC,0.01 "
             elif event.unicode == "s":
                 commands_to_send += "change_engines|AC,-0.01 "
-
             elif event.unicode == "W":
                 commands_to_send += "fire_rcs|AC,0 "
             elif event.unicode == "A":
@@ -110,12 +112,10 @@ while True:
                 commands_to_send += "fire_rcs|AC," + str(math.pi) + " "
             elif event.unicode == "D":
                 commands_to_send += "fire_rcs|AC," + str(-math.pi / 2) + " "
-
             elif event.unicode == "-":
                 camera.zoom(-0.1)
             elif event.unicode == "+":
                 camera.zoom(0.1)
-
             elif event.unicode == ".":
                 commands_to_send += "accelerate_time|1 "
             elif event.unicode == ",":
@@ -164,7 +164,7 @@ while True:
     pygame.display.flip()
     screen.fill((0, 0, 0))
 
-    #time.sleep(1/fps.asNumber(Hz))
+    # time.sleep(1/fps.asNumber(Hz))
     # time.sleep(1/fps.asNumber(Hz) - time_spent_on_last_frame)
 
 sock.close()
