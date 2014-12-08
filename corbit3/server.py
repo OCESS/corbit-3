@@ -117,7 +117,7 @@ def piloting_server():
         pilot_commands_lock.acquire()
         pilot_commands = corbit.network.recvall(pilot_socket)
         pilot_commands_lock.release()
-        # print("got commands:", pilot_commands)
+        print("got commands:", pilot_commands)
         if not corbit.network.sendall(corbit.objects.json_serialize(entities), pilot_socket):
             print("relistening for pilot connection")
             serversocket.close()
@@ -140,8 +140,6 @@ def ticker():
     global ticks_to_simulate
     ticks_to_simulate += 1
     threading.Timer(time_per_tick().asNumber(un.s), ticker).start()
-
-
 ticker()
 
 while True:
