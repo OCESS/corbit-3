@@ -158,6 +158,7 @@ while True:
                                 int(screen_position[1] + screen_radius * math.sin(entity.angular_position))])
 
 
+
     # flip the screen upside down, so that y values increase upwards
     screen.blit(pygame.transform.flip(screen, False, True), (0, 0))
     draw(screen)

@@ -1,12 +1,14 @@
 from unum.units import rad, m, s, kg, N
 import scipy
+from scipy import linalg as LA
 import math
 import json
 import io
 import collections
 
+
 class Camera:
-    "Used to store the zoom level and position of the display's camera. Change this to change the viewpoint"
+    """Used to store the zoom level and position of the display's camera. Change this to change the viewpoint"""
 
     def __init__(self, zoom_level, center=None):
         self.center = center
@@ -27,24 +29,24 @@ class Camera:
     speed = 1e2
 
     def update(self, entity):
-        "Updates the camera's position to match that of the center"
+        """Updates the camera's position to match that of the center"""
         if self.locked:
             self.displacement = entity.displacement
             self.velocity = entity.velocity
             self.acceleration = entity.acceleration
 
     def pan(self, amount):
-        "Pan the camera by a vector amount"
+        """Pan the camera by a vector amount"""
         self.acceleration += amount * self.speed
 
     def move(self, time):
-        "Called every tick, keeps the camera moving"
+        """Called every tick, keeps the camera moving"""
         self.velocity += self.acceleration * time
         self.acceleration = 0 * m / s / s
         self.displacement += self.velocity * time
 
     def zoom(self, amount):
-        "Zooms the camera in and out. Call this instead of modifying zoom_level"
+        """Zooms the camera in and out. Call this instead of modifying zoom_level"""
         if amount < 0:
             self.zoom_level /= 1 - amount
         else:
@@ -52,7 +54,7 @@ class Camera:
 
 
 class Entity:
-    "Base class for all physical objects"
+    """Base class for all physical objects"""
 
     def __init__(self, name, color, mass, radius,
                  displacement, velocity, acceleration,
@@ -71,11 +73,11 @@ class Entity:
         self.angular_acceleration = angular_acceleration  # units: radians/s/s
 
     def mass(self):
-        "Getter function for mass, will be overriden in Entity-derived classes"
+        """Getter function for mass, will be overriden in Entity-derived classes"""
         return self.dry_mass
 
     def moment_of_inertia(self):
-        "Returns the entity's moment of inertia, which is that of a sphere"
+        """Returns the entity's moment of inertia, which is that of a sphere"""
         return (2 * self.mass() * self.radius ** 2) / 5
 
     def accelerate(self, force, angle):
@@ -133,7 +135,7 @@ class Entity:
         self.angular_position += self.angular_speed * time
 
     def dict_repr(self):
-        "Returns an ordered dictionary representation of the Entity"
+        """Returns an ordered dictionary representation of the Entity"""
 
         blob = collections.OrderedDict([
             ("name", self.name),
@@ -151,32 +153,50 @@ class Entity:
         return blob
 
 
-class Engine:
-    "Engine class, represents things like main habitat engines, habitat RCS systems, etc."
+class EngineSystem:
+    """EngineSystem class, represents things like main habitat engines, habitat RCS systems, etc."""
 
-    def __init__(self, fuel, rated_fuel_flow, I_sp, engine_positions):
-        self.fuel = fuel
-        self.rated_fuel_flow = rated_fuel_flow
-        self.I_sp = I_sp
-        self.engine_positions = engine_positions
-        self.usage = 0
+    def __init__(self, fuel, rated_fuel_flow, I_sp, engine_placements):
+        # when I do something like fuel.asNumber(kg) * kg, I'm forcing the units to kg and checking that they
+        # are indeed kg in the first place
+        self.fuel = fuel.asNumber(kg) * kg    # how much fuel left in the tank
+        self.rated_fuel_flow = rated_fuel_flow.asNumber(kg/s) * kg/s  # how fast fuel goes out at 100% engines
+        self.I_sp = I_sp.asNumber(m/s) * m/s    # specific impulse i.e. how much thrust you get per kg of fuel
+
+        # a list of pairs of form (angle, vector)
+#        for angle, vector in engine_placements:
+#            angle = angle % 2*math.pi           # standard angles are nice
+#            vector = vector / LA.norm(vector)   # unit vectors only please
+
+        self.engine_placements = engine_placements
+        # where 'angle' is where on the entity's surface the engine is placed and
+        # 'vector' is in which direction the engine is pointing
+        # for example, [(0, scipy.array((-1, 0))] is a single engine, on the front of the entity, pointing right
+        # TODO: make sure this is actually what is displayed
+        # note: the size of the array does not multiply the thrust.
+        # when thrusting, we divide the thrust over ALL engines in an EngineSystem
+
+        self.throttle = 0   # self-explanatory, 0: 0%, 0.5: 50%, and 1: 100%
 
     def thrust(self, time):
         """Determines the thrust an engine gives out over a time interval
         :param time: time interval over which engine is thrusting, in s
         :return: total thrust, in N
         """
-        if self.fuel > (self.rated_fuel_flow * abs(self.usage)) * time:
-            fuel_usage = self.rated_fuel_flow * self.usage
+        fuel_usage = self.rated_fuel_flow * self.throttle
+        fuel_used = abs(fuel_usage) * time
+
+        if self.fuel > fuel_used:
             self.fuel -= abs(fuel_usage) * time
         else:
             fuel_usage = self.fuel / time
             self.fuel = 0 * kg
+
         return self.I_sp * fuel_usage
 
 
 class Habitat(Entity):
-    "A special class for the habitat"
+    """A special class for the habitat"""
 
     def __init__(self, name, color, mass, radius,
                  displacement, velocity, acceleration,
@@ -186,24 +206,28 @@ class Habitat(Entity):
                         displacement, velocity, acceleration,
                         angular_position, angular_speed, angular_acceleration)
 
-        self.main_engines = Engine(fuel, 100 * kg / s, 5000 * m / s, [math.pi])
+        self.main_engines = EngineSystem(fuel, 100 * kg/s, 5000 * m/s, [math.pi + 0.2,
+                                                                        math.pi - 0.2])
         self.rcs = \
-            Engine(rcs_fuel, 5 * kg / s, 3000 * m / s, [0, math.pi / 2, math.pi, 3 * math.pi / 2])
-        self.rcs.usage = 1
+            EngineSystem(rcs_fuel, 5 * kg/s, 3000 * m/s, [0,
+                                                          math.pi / 2,
+                                                          math.pi,
+                                                          3 * math.pi / 2])
+        self.rcs.throttle = 1
 
     def mass(self):
         return self.dry_mass + self.rcs.fuel + self.main_engines.fuel
 
     def move(self, time):
-        "Accelerates habitat from main engine thrust, then moves the habitat normally"
+        """Accelerates habitat from main engine thrust, then moves the habitat normally"""
 
         thrust = self.main_engines.thrust(time)
         thrust_vector = \
             N * scipy.array((math.cos(self.angular_position) * thrust.asNumber(N),
                              math.sin(self.angular_position) * thrust.asNumber(N)))
-        for angle in self.main_engines.engine_positions:
+        for angle in self.main_engines.engine_placements:
             self.accelerate(
-                thrust_vector / len(self.main_engines.engine_positions),
+                thrust_vector / len(self.main_engines.engine_placements),
                 angle + self.angular_position)
 
         Entity.move(self, time)
@@ -223,13 +247,13 @@ def oneshot_vernier_thrusters(entity, amount, time):
     :param amount: ratio of vernier thruster rated thrust to thrust by
     :param time: time over which to thrust
     """
-    for angle in entity.rcs.engine_positions:
+    for angle in entity.rcs.engine_placements:
         print(amount * entity.rcs.thrust(time) * scipy.array(
             (-math.sin(entity.angular_position + angle), math.cos(entity.angular_position + angle)))
-              / len(entity.rcs.engine_positions), angle + entity.angular_position)
+              / len(entity.rcs.engine_placements), angle + entity.angular_position)
         entity.accelerate(amount * entity.rcs.thrust(time) * scipy.array(
             (-math.sin(entity.angular_position + angle), math.cos(entity.angular_position + angle)))
-                          / len(entity.rcs.engine_positions), angle + entity.angular_position)
+                          / len(entity.rcs.engine_placements), angle + entity.angular_position)
 
 
 def find_entity(name, entities):
