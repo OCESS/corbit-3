@@ -164,14 +164,19 @@ class EngineSystem:
         self.I_sp = I_sp.asNumber(m/s) * m/s    # specific impulse i.e. how much thrust you get per kg of fuel
 
         # a list of pairs of form (angle, vector)
-#        for angle, vector in engine_placements:
-#            angle = angle % 2*math.pi           # standard angles are nice
-#            vector = vector / LA.norm(vector)   # unit vectors only please
+        for angle, vector in engine_placements:
+            angle = angle % 2*math.pi           # standard angles are nice
+            vector = vector / LA.norm(vector)   # unit vectors only please
 
         self.engine_placements = engine_placements
         # where 'angle' is where on the entity's surface the engine is placed and
-        # 'vector' is in which direction the engine is pointing
-        # for example, [(0, scipy.array((-1, 0))] is a single engine, on the front of the entity, pointing right
+        # 'vector' is in which the engine has its thrust vector
+        # for example, [(3.1415, scipy.array((1, 0))] is a single engine, on the bottom, that fires away
+        #           __
+        #         /    \
+        #    <<<<|      |     pchooo the rocket is going off to the right -> -> -> ->
+        #         \ __ /
+        #
         # TODO: make sure this is actually what is displayed
         # note: the size of the array does not multiply the thrust.
         # when thrusting, we divide the thrust over ALL engines in an EngineSystem
@@ -179,7 +184,7 @@ class EngineSystem:
         self.throttle = 0   # self-explanatory, 0: 0%, 0.5: 50%, and 1: 100%
 
     def thrust(self, time):
-        """Determines the thrust an engine gives out over a time interval
+        """Determines the thrust a single engine gives out over a time interval
         :param time: time interval over which engine is thrusting, in s
         :return: total thrust, in N
         """
@@ -192,7 +197,7 @@ class EngineSystem:
             fuel_usage = self.fuel / time
             self.fuel = 0 * kg
 
-        return self.I_sp * fuel_usage
+        return self.I_sp * fuel_usage / len(self.engine_placements)
 
 
 class Habitat(Entity):
@@ -201,43 +206,36 @@ class Habitat(Entity):
     def __init__(self, name, color, mass, radius,
                  displacement, velocity, acceleration,
                  angular_position, angular_speed, angular_acceleration,
-                 fuel, rcs_fuel):
+                 engine_systems):
         Entity.__init__(self, name, color, mass, radius,
                         displacement, velocity, acceleration,
                         angular_position, angular_speed, angular_acceleration)
 
-        self.main_engines = EngineSystem(fuel, 100 * kg/s, 5000 * m/s, [math.pi + 0.2,
-                                                                        math.pi - 0.2])
-        self.rcs = \
-            EngineSystem(rcs_fuel, 5 * kg/s, 3000 * m/s, [0,
-                                                          math.pi / 2,
-                                                          math.pi,
-                                                          3 * math.pi / 2])
-        self.rcs.throttle = 1
+        self.engine_systems = engine_systems
 
     def mass(self):
-        return self.dry_mass + self.rcs.fuel + self.main_engines.fuel
+        fuel_mass = 0 * kg
+        for system in self.engine_systems.values(): fuel_mass += system.fuel
+        return self.dry_mass + fuel_mass
 
     def move(self, time):
         """Accelerates habitat from main engine thrust, then moves the habitat normally"""
+        #todo: move this code into a server loop
 
-        thrust = self.main_engines.thrust(time)
-        thrust_vector = \
-            N * scipy.array((math.cos(self.angular_position) * thrust.asNumber(N),
-                             math.sin(self.angular_position) * thrust.asNumber(N)))
-        for angle in self.main_engines.engine_placements:
-            self.accelerate(
-                thrust_vector / len(self.main_engines.engine_placements),
-                angle + self.angular_position)
+#         thrust = self.main_engines.thrust(time)
+#         thrust_vector = \
+#             N * scipy.array((math.cos(self.angular_position) * thrust.asNumber(N),
+#                              math.sin(self.angular_position) * thrust.asNumber(N)))
+#         for angle in self.main_engines.engine_positions:
+#             self.accelerate(
+#                 thrust_vector / len(self.main_engines.engine_positions),
+#                angle + self.angular_position)
 
         Entity.move(self, time)
 
     def dict_repr(self):
         blob = Entity.dict_repr(self)
-        blob.update(collections.OrderedDict([
-            ("fuel", self.main_engines.fuel.asNumber()),
-            ("rcs_fuel", self.rcs.fuel.asNumber())
-        ]))
+        blob.update(collections.OrderedDict(self.engine_systems))
         return blob
 
 
@@ -247,13 +245,13 @@ def oneshot_vernier_thrusters(entity, amount, time):
     :param amount: ratio of vernier thruster rated thrust to thrust by
     :param time: time over which to thrust
     """
-    for angle in entity.rcs.engine_placements:
+    for angle in entity.rcs.engine_positions:
         print(amount * entity.rcs.thrust(time) * scipy.array(
             (-math.sin(entity.angular_position + angle), math.cos(entity.angular_position + angle)))
-              / len(entity.rcs.engine_placements), angle + entity.angular_position)
+              / len(entity.rcs.engine_positions), angle + entity.angular_position)
         entity.accelerate(amount * entity.rcs.thrust(time) * scipy.array(
             (-math.sin(entity.angular_position + angle), math.cos(entity.angular_position + angle)))
-                          / len(entity.rcs.engine_placements), angle + entity.angular_position)
+                          / len(entity.rcs.engine_positions), angle + entity.angular_position)
 
 
 def find_entity(name, entities):
@@ -325,23 +323,21 @@ def load(input_stream):
                 color = entity["color"]
                 mass = kg * entity["mass"]
                 radius = m * entity["radius"]
-
                 displacement = m * scipy.array(entity["displacement"])
-                velocity = m / s * scipy.array(entity["velocity"])
-                acceleration = m / s / s * scipy.array(entity["acceleration"])
-
+                velocity = m/s * scipy.array(entity["velocity"])
+                acceleration = m/s/s * scipy.array(entity["acceleration"])
                 angular_position = rad * entity["angular_position"]
-                angular_speed = rad / s * entity["angular_speed"]
-                angular_acceleration = rad / s / s * entity["angular_acceleration"]
+                angular_speed = rad/s * entity["angular_speed"]
+                angular_acceleration = rad/s/s * entity["angular_acceleration"]
 
+                json_entities.append(Entity(name, color, mass, radius,
+                                            displacement, velocity, acceleration,
+                                            angular_position, angular_speed,
+                                            angular_acceleration))
             except KeyError:
                 print("entity " + name + " has undefined elements, skipping...")
                 break
 
-            json_entities.append(Entity(name, color, mass, radius,
-                                                       displacement, velocity, acceleration,
-                                                       angular_position, angular_speed,
-                                                       angular_acceleration))
     except KeyError:
         print("no entities found")
 
@@ -357,26 +353,28 @@ def load(input_stream):
                 color = habitat["color"]
                 mass = kg * habitat["mass"]
                 radius = m * habitat["radius"]
-
                 displacement = m * scipy.array(habitat["displacement"])
-                velocity = m / s * scipy.array(habitat["velocity"])
-                acceleration = m / s / s * scipy.array(habitat["acceleration"])
-
+                velocity = m/s * scipy.array(habitat["velocity"])
+                acceleration = m/s/s * scipy.array(habitat["acceleration"])
                 angular_position = rad * habitat["angular_position"]
-                angular_speed = rad / s * habitat["angular_speed"]
-                angular_acceleration = rad / s / s * habitat["angular_acceleration"]
+                angular_speed = rad/s * habitat["angular_speed"]
+                angular_acceleration = rad/s/s * habitat["angular_acceleration"]
+                engine_systems = {}
+                for system in habitat["engine_systems"]:
+                    engine_systems.update({system["class"]:
+                                               EngineSystem(system["fuel"] * kg,
+                                                            system["rated fuel flow"] * kg/s,
+                                                            system["specific impulse"] * m/s,
+                                                            system["placements"])})
 
-                fuel = kg * habitat["fuel"]
-                rcs_fuel = kg * habitat["rcs_fuel"]
-
+                json_entities.append(Habitat(name, color, mass, radius,
+                                             displacement, velocity, acceleration,
+                                             angular_position, angular_speed,
+                                             angular_acceleration,
+                                             engine_systems))
             except KeyError:
                 print("habitat " + name + " has undefined elements, skipping...")
                 break
-            json_entities.append(Habitat(name, color, mass, radius,
-                                                        displacement, velocity, acceleration,
-                                                        angular_position, angular_speed,
-                                                        angular_acceleration,
-                                                        fuel, rcs_fuel))
 
     except KeyError:
         print("no habitats found")

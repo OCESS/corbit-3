@@ -1,4 +1,5 @@
 #!/bin/python3
+#todo: twisted appropriate for this?
 
 __version__ = "3.0.0"
 import corbit.network
