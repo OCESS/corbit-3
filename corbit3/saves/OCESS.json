@@ -1,31 +1,28 @@
 {
     "entities": [
-        {
-            "name": "AC A",
+        { "name": "AC A",
             "color": [255, 255, 0],
             "displacement": [-100, -60],
             "velocity": [0, 0],
             "acceleration": [0, 0],
             "mass": 100,
             "radius": 13,
-            "angular_position": 21,
-            "angular_speed": 22,
-            "angular_acceleration": 23
-        }
+            "angular position": 21,
+            "angular speed": 22,
+            "angular acceleration": 23}
     ],
     "habitats": [
-        {
-            "name": "AC",
+        { "name": "AC",
             "color": [255, 0, 0],
             "displacement": [-180, -75],
             "velocity": [25, 0],
             "acceleration": [0, 0],
             "mass": 100,
             "radius": 8,
-            "angular_position": 0,
-            "angular_speed": 1,
-            "angular_acceleration": 0,
-            "engine_systems": [
+            "angular position": 0,
+            "angular speed": 1,
+            "angular acceleration": 0,
+            "engine systems": [
                 { "class": "rcs",
                   "fuel": 100,
                   "rated fuel flow": 5,
@@ -40,8 +37,6 @@
                   "specific impulse": 100,
                   "placements": [
                       [3.28, [1, 0]],
-                      [3.0, [1,0]] ]}
-            ]
-        }
+                      [3.0, [1,0]] ]} ]}
     ]
 }

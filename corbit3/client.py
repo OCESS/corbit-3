@@ -33,7 +33,6 @@ sock.settimeout(8)
 connection_established = False
 while not connection_established is None:
     print("Connecting to server...")
-    print(connection_established)
     try:
         connection_established = sock.connect((socket.gethostname(), PORT))
     except (ConnectionRefusedError, ConnectionAbortedError) as e:

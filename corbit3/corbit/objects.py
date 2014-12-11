@@ -135,22 +135,20 @@ class Entity:
         self.angular_position += self.angular_speed * time
 
     def dict_repr(self):
-        """Returns an ordered dictionary representation of the Entity"""
+        """Returns a dictionary representation of the Entity, with all the data needed to
+        reconstruct it again"""
 
-        blob = collections.OrderedDict([
-            ("name", self.name),
-            ("color", self.color),
-            ("mass", self.mass().asNumber()),
-            ("radius", self.radius.asNumber()),
-            ("displacement", self.displacement.asNumber().tolist()),
-            ("velocity", self.velocity.asNumber().tolist()),
-            ("acceleration", self.acceleration.asNumber().tolist()),
-
-            ("angular_position", self.angular_position.asNumber()),
-            ("angular_speed", self.angular_speed.asNumber()),
-            ("angular_acceleration", self.angular_acceleration.asNumber())
-        ])
-        return blob
+        return {
+            "name": self.name,
+            "color": self.color,
+            "mass": self.mass().asNumber(),
+            "radius": self.radius.asNumber(),
+            "displacement": self.displacement.asNumber().tolist(),
+            "velocity": self.velocity.asNumber().tolist(),
+            "acceleration": self.acceleration.asNumber().tolist(),
+            "angular position": self.angular_position.asNumber(),
+            "angular speed": self.angular_speed.asNumber(),
+            "angular acceleration": self.angular_acceleration.asNumber()}
 
 
 class EngineSystem:
@@ -199,6 +197,14 @@ class EngineSystem:
 
         return self.I_sp * fuel_usage / len(self.engine_placements)
 
+    def dict_repr(self):
+        """Returns a dictionary with all the values that are needed to construct this again
+        contained within the dict"""
+        return {"fuel": self.fuel.asNumber(kg),
+                "rated fuel flow": self.rated_fuel_flow.asNumber(kg/s),
+                "specific impulse": self.I_sp.asNumber(m/s),
+                "placements": self.engine_placements}
+
 
 class Habitat(Entity):
     """A special class for the habitat"""
@@ -235,7 +241,12 @@ class Habitat(Entity):
 
     def dict_repr(self):
         blob = Entity.dict_repr(self)
-        blob.update(collections.OrderedDict(self.engine_systems))
+        engine_systems = []
+        for engine_class, data in self.engine_systems.items():
+            json_obj = data.dict_repr()
+            json_obj["class"] = engine_class
+            engine_systems.append(json_obj)
+        blob.update({"engine systems": engine_systems})
         return blob
 
 
@@ -286,9 +297,8 @@ def json_serialize(entities):
     :param entities: the list of entities to serialize
     :return: the JSON string representation of the entities
     """
-    json_data = {}
-    json_data["entities"] = []
-    json_data["habitats"] = []
+    json_data = {"entities": [],
+                 "habitats": []}
 
     for entity in entities:
         if type(entity) is Habitat:
@@ -297,7 +307,6 @@ def json_serialize(entities):
             json_data["entities"].append(entity.dict_repr())
         else:
             print("found something in entities list that isn't a recognized entity or derivative work,", entity.name)
-
     return json.dumps(json_data, separators=(",", ":"))
 
 
@@ -311,6 +320,34 @@ def load(input_stream):
     json_root = json.load(input_stream)
     json_entities = []
 
+    def load_entities(json_object):
+        # protip: uncomment all those print lines if you want to find out where
+        # a given object has undefined elements. Pretty handy. I spent several hours
+        # figuring out what was happening until I put those print statements in,
+        # and it turned out my server was sending fields like "angular_speed" instead
+        # of "angular speed"
+        # I should really make unit tests
+        color = json_object["color"]
+        #print(name, "color", color)
+        mass = kg * json_object["mass"]
+        #print(name, "mass", mass)
+        radius = m * json_object["radius"]
+        #print(name, "radius", radius)
+        displacement = m * scipy.array(json_object["displacement"])
+        #print(name, "displacement", displacement)
+        velocity = m/s * scipy.array(json_object["velocity"])
+        #print(name, "velocity", velocity)
+        acceleration = m/s/s * scipy.array(json_object["acceleration"])
+        #print(name, "acceleration", acceleration)
+        angular_position = rad * json_object["angular position"]
+        #print(name, "angular position", angular_position)
+        angular_speed = rad/s * json_object["angular speed"]
+        #print(name, "angular speed", angular_speed)
+        angular_acceleration = rad/s/s * json_object["angular acceleration"]
+        #print(name, "angular acceleration", angular_acceleration)
+        return (color, mass, radius, displacement, velocity, acceleration,
+                angular_position, angular_speed, angular_acceleration)
+
     try:
         data = json_root["entities"]
         for entity in data:
@@ -320,15 +357,8 @@ def load(input_stream):
                 print("unnamed entity found, skipping")
                 break
             try:
-                color = entity["color"]
-                mass = kg * entity["mass"]
-                radius = m * entity["radius"]
-                displacement = m * scipy.array(entity["displacement"])
-                velocity = m/s * scipy.array(entity["velocity"])
-                acceleration = m/s/s * scipy.array(entity["acceleration"])
-                angular_position = rad * entity["angular_position"]
-                angular_speed = rad/s * entity["angular_speed"]
-                angular_acceleration = rad/s/s * entity["angular_acceleration"]
+                color, mass, radius, displacement, velocity, acceleration,\
+                angular_position, angular_speed, angular_acceleration = load_entities(entity)
 
                 json_entities.append(Entity(name, color, mass, radius,
                                             displacement, velocity, acceleration,
@@ -350,17 +380,10 @@ def load(input_stream):
                 print("unnamed habitat found, skipping")
                 break
             try:
-                color = habitat["color"]
-                mass = kg * habitat["mass"]
-                radius = m * habitat["radius"]
-                displacement = m * scipy.array(habitat["displacement"])
-                velocity = m/s * scipy.array(habitat["velocity"])
-                acceleration = m/s/s * scipy.array(habitat["acceleration"])
-                angular_position = rad * habitat["angular_position"]
-                angular_speed = rad/s * habitat["angular_speed"]
-                angular_acceleration = rad/s/s * habitat["angular_acceleration"]
+                color, mass, radius, displacement, velocity, acceleration, \
+                angular_position, angular_speed, angular_acceleration = load_entities(entity)
                 engine_systems = {}
-                for system in habitat["engine_systems"]:
+                for system in habitat["engine systems"]:
                     engine_systems.update({system["class"]:
                                                EngineSystem(system["fuel"] * kg,
                                                             system["rated fuel flow"] * kg/s,
@@ -379,5 +402,3 @@ def load(input_stream):
     except KeyError:
         print("no habitats found")
     return json_entities
-
-
