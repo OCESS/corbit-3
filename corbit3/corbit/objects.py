@@ -276,27 +276,17 @@ def find_entity(name, entities):
             return entity
 
 
-def save(output_stream, entities):
-    """Dumps a list of entities into a JSON string in the a given stream
-    :param output_stream: the stream to dump to, e.g. can be a filestream
-    :param entities: the list of entities to dump
-    :return: None
-    """
-    json_data = {}
-    json_data["entities"] = []
-
-    for entity in entities:
-        json_data["entities"].append(entity.dict_repr())
-
-    json.dump(json_data, output_stream,
-              indent=4, sort_keys=False, separators=(",", ": "))
-
-
-def json_serialize(entities):
+def json_serialize(entities, output_stream=None, pretty=False, json_sort_keys=False):
     """Serializes a list of entities into a JSON string
     :param entities: the list of entities to serialize
     :return: the JSON string representation of the entities
     """
+    json_separators = (",", ":")
+    json_indent = None
+    if pretty:
+        json_separators = (",", ": ")
+        json_indent = 4
+
     json_data = {"entities": [],
                  "habitats": []}
 
@@ -307,10 +297,20 @@ def json_serialize(entities):
             json_data["entities"].append(entity.dict_repr())
         else:
             print("found something in entities list that isn't a recognized entity or derivative work,", entity.name)
-    return json.dumps(json_data, separators=(",", ":"))
+
+    if not json_data["habitats"]:
+        del json_data["habitats"]
+    if not json_data["entities"]:
+        del json_data["entities"]
+
+    if output_stream == None:
+        return json.dumps(json_data, indent=json_indent, sort_keys=json_sort_keys, separators=json_separators)
+    else:
+        return json.dump(json_data, output_stream,
+                         indent=json_indent, sort_keys=json_sort_keys, separators=json_separators)
 
 
-def load(input_stream):
+def load(input_stream, entities):
     """Given a JSON string or a JSON stream of entities, parses into binary and returns
     :param input_stream: string or stream of Corbit format to parse
     :return: a list of entities
@@ -402,3 +402,52 @@ def load(input_stream):
     except KeyError:
         print("no habitats found")
     return json_entities
+
+
+if __name__ == "__main__":
+    import unittest
+
+    class TestObjects(unittest.TestCase):
+        def setUp(self):
+            self.sample_habitat = \
+            Habitat("habitat", (255, 0, 0), 100*kg, 8*m,
+                    m*scipy.array((-180, -75)), m/s*scipy.array((25, 0)), m/s/s*scipy.array((1, 1)),
+                    0.1*rad, 1.5*rad/s, -0.1*rad/s/s,
+                    {"rcs":
+                         EngineSystem(100*kg, 5*kg/s, 3000*m/s, [[0, [-1, 0]],
+                                                                 [1.57, [0, -1]],
+                                                                 [3.14, [1, 0]],
+                                                                 [4.71, [0, 1]]]),
+                     "main engines":
+                         EngineSystem(1000*kg, 100*kg/s, 100*m/s, [[3.28, [1, 0]],
+                                                                   [3.0, [1, 0]]])})
+
+            self.sample_entity = \
+                Entity("earth i guess", (0, 255, 0), 100*kg, 13*m,
+                       m*scipy.array((-100, -60)), m/s*scipy.array((0, 0)), m/s/s*scipy.array((0, 0)),
+                       21*rad, 22*rad/s, 23*rad/s/s)
+
+        def test_find_entity(self):
+            self.assertEqual(find_entity("earth i guess", [self.sample_entity]),
+                             self.sample_entity,
+                             "I wouldn't know my own planet if it smacked me in the face")
+            self.assertEqual(find_entity("habitat", [self.sample_habitat]),
+                             self.sample_habitat,
+                             "I wouldn't know a habitat if it smacked me in the face")
+            self.assertEqual(find_entity("alex likes puppet bums", [self.sample_habitat]),
+                             None,
+                             "I was able to find an entity when I shouldn't have")
+            self.assertEqual(find_entity("habitat", [self.sample_habitat, self.sample_entity]),
+                             self.sample_habitat,
+                             "I can't handle more than one element in a list")
+
+        def test_json_serialization(self):
+            # Always use json_sort_keys in asserts, otherwise it's undefined what order they come in
+            print(json_serialize([self.sample_entity], json_sort_keys=True, pretty=False))
+            self.assertEqual(json_serialize([self.sample_habitat], pretty=False, json_sort_keys=True),
+                             '{"habitats":[{"acceleration":[1.0,1.0],"angular acceleration":-0.1,"angular position":0.1,"angular speed":1.5,"color":[255,0,0],"displacement":[-180,-75],"engine systems":[{"class":"rcs","fuel":100.0,"placements":[[0,[-1,0]],[1.57,[0,-1]],[3.14,[1,0]],[4.71,[0,1]]],"rated fuel flow":5.0,"specific impulse":3000.0},{"class":"main engines","fuel":1000.0,"placements":[[3.28,[1,0]],[3.0,[1,0]]],"rated fuel flow":100.0,"specific impulse":100.0}],"mass":1200.0,"name":"habitat","radius":8,"velocity":[25.0,0.0]}]}',
+                             "I'm not serializing habitats properly")
+            self.assertEqual(json_serialize([self.sample_entity], json_sort_keys=True, pretty=False))
+
+
+    unittest.main()

@@ -1,4 +1,5 @@
-#!/bin/python3
+#! /usr/bin/env python3
+
 
 __version__ = "3.0.0"
 import corbit.physics
@@ -155,7 +156,6 @@ while True:
             pygame.draw.aaline(screen, (0, 255, 0), screen_position,
                                [int(screen_position[0] + screen_radius * math.cos(entity.angular_position)),
                                 int(screen_position[1] + screen_radius * math.sin(entity.angular_position))])
-
 
 
     # flip the screen upside down, so that y values increase upwards

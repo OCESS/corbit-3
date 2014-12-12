@@ -1,5 +1,5 @@
-#!/bin/python3
-#todo: twisted appropriate for this?
+#! /usr/bin/env python3
+
 
 __version__ = "3.0.0"
 import corbit.network
@@ -17,6 +17,9 @@ import copy
 print("Corbit SERVER " + __version__)
 
 entities = []  # This object stores a list of all entities
+
+with open("saves/OCESS.json", "r") as loadfile:
+    entities = corbit.objects.load(loadfile)
 
 time_acc_index = 0
 time_acceleration = [1, 5, 10, 50, 100, 1000, 10000, 100000]
@@ -94,9 +97,6 @@ def act_on_piloting_commands(commands):
                 with open(filename, "r") as loadfile:
                     entities = corbit.objects.load(loadfile)
 
-
-with open("saves/OCESS.json", "r") as loadfile:
-    entities = corbit.objects.load(loadfile)
 
 pilot_commands = ""
 pilot_commands_lock = threading.Lock()
