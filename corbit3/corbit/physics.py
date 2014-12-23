@@ -8,15 +8,15 @@ G = 6.673*10**-11 * N * (m/kg)**2
 def distance(A, B):
     return m * scipy.linalg.norm((A.displacement - B.displacement).asNumber(m))
 
+def speed(A, B):
+    return m/s * scipy.linalg.norm((A.velocity - B.velocity).asNumber(m/s))
 
 def altitude(A, B):
     return distance(A, B) - A.radius - B.radius
 
-
 def angle(A, B):
-    return math.atan2((B.displacement[1] - A.displacement[1]),
-                 (B.displacement[0] - A.displacement[0]))
-
+    return math.atan2((B.displacement[1] - A.displacement[1]).asNumber(),
+                 (B.displacement[0] - A.displacement[0]).asNumber())
 
 def gravitational_force(A, B):
     unit_distance = scipy.array([math.cos(angle(A, B)), math.sin(angle(A, B))])

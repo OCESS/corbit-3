@@ -8,8 +8,10 @@ import corbit.network
 import sys  # used to exit the program
 import pygame  # used for drawing and a couple other things
 import pygame.locals as gui  # for things like KB_LEFT
+import unum
 import unum.units as un
 import scipy
+import numpy.linalg as LA
 import math
 import socket  # used to communicate with the server
 import time
@@ -41,33 +43,60 @@ while not connection_established is None:
         print("Could not connect to server, retrying...")
         time.sleep(1)
 
-
-def print_text(text, font, gap, line_number, display):
-    try:
-        round(text, 1)
-    except TypeError:
-        pass
-    label = font.render(text, 1, (200, 200, 200))
-    display.blit(label, (gap[0], gap[1] * line_number))
-    return line_number + 1
-
-
 camera = corbit.objects.Camera(1, "AC")
 screen_size = screen.get_size()
-
+unum.Unum.VALUE_FORMAT = "%8.2f"
 
 def draw(display):
-    line_number = 1
-    gap = [10, 10]
-    pygame.draw.circle(display, (150, 150, 150), (10, 10), 10)
-    display_font = pygame.font.SysFont("monospace", 15)
+    for entity in entities:
+        # calculating the on-screen position
+        screen_position = \
+            [int(
+                camera.zoom_level *
+                (entity.displacement - camera.displacement).asNumber()[0]
+                + screen_size[0] / 2),
+             int(
+                 camera.zoom_level * (entity.displacement - camera.displacement).asNumber()[1]
+                 + screen_size[1] / 2)]
+        # calculating the on-screen radius
+        screen_radius = int(entity.radius.asNumber() * camera.zoom_level)
 
-    alt = corbit.physics.altitude(corbit.objects.find_entity("AC", entities),
-                                  corbit.objects.find_entity("AC A", entities)).asNumber(un.m)
-    alt_text = str(corbit.physics.altitude(
-        corbit.objects.find_entity("AC", entities),
-        corbit.objects.find_entity("AC A", entities)))
-    line_number = print_text(alt_text, display_font, gap, line_number, display)
+        if type(entity) == corbit.objects.Entity:
+            # entity drawing is the simplest, just a circle
+            pygame.draw.circle(screen, entity.color, screen_position, screen_radius)
+        elif type(entity) == corbit.objects.Habitat:
+            # habitat is the entity drawing, but with a line pointing forwards
+            pygame.draw.circle(screen, entity.color,
+                               screen_position, screen_radius)
+            pygame.draw.aaline(screen, (0, 255, 0), screen_position,
+                               [int(screen_position[0] + screen_radius * math.cos(entity.angular_position)),
+                                int(screen_position[1] + screen_radius * math.sin(entity.angular_position))])
+
+    # flip the screen upside down, so that y values increase upwards like on a cartesian plane
+    screen.blit(pygame.transform.flip(screen, False, True), (0, 0))
+
+    # This is where the magic HUD drawing hapen
+    def print_text(text, line_number, display):
+        gap = [10, 10]
+        font = pygame.font.SysFont("monospace", 15)
+        display.blit(font.render(text, 1, (200, 200, 200)),
+                     (gap[0], gap[1] * 2 *line_number))
+        return line_number + 1
+
+    lines_to_draw = ["Altitude: " + corbit.physics.altitude(corbit.objects.find_entity("AC", entities),
+                                                            corbit.objects.find_entity("AC A", entities)).__str__(),
+                     "Speed: " + corbit.physics.speed(corbit.objects.find_entity("AC", entities),
+                                                      corbit.objects.find_entity("AC A", entities)).__str__(),
+                     "Acceleration: " + (un.m/un.s/un.s * LA.norm((corbit.objects.find_entity("AC", entities).acceleration -
+                                         corbit.physics.gravitational_force(corbit.objects.find_entity("AC", entities),
+                                                                            corbit.objects.find_entity("AC A", entities))
+                                         /corbit.objects.find_entity("AC", entities).mass()).asNumber(un.m/un.s/un.s))).__str__(),
+                     "Rotation: " + corbit.objects.find_entity("AC", entities).angular_speed.__str__(),
+                     "         (" + corbit.objects.find_entity("AC", entities).angular_acceleratior.__str__() + ")"]
+    # TODO: write apo peri etc. code in physics
+    line_number = 1
+    for text in lines_to_draw:
+        line_number = print_text(text, line_number, display)
 
 
 while True:
@@ -120,7 +149,6 @@ while True:
                 commands_to_send += "accelerate_time|1 "
             elif event.unicode == ",":
                 commands_to_send += "accelerate_time|-1 "
-
             elif event.unicode == "r":
                 commands_to_send += "open|saves/OCESS.json "
 
@@ -129,37 +157,9 @@ while True:
 
     entities = corbit.objects.load(corbit.network.recvall(sock))
 
-    camera.move(1 / fps)
+    camera.move(1/fps)
     camera.update(corbit.objects.find_entity(camera.center, entities))
 
-    # # Drawing routines here
-    for entity in entities:
-        # calculating the on-screen position
-        screen_position = \
-            [int(
-                camera.zoom_level *
-                (entity.displacement - camera.displacement).asNumber()[0]
-                + screen_size[0] / 2),
-             int(
-                 camera.zoom_level * (entity.displacement - camera.displacement).asNumber()[1]
-                 + screen_size[1] / 2)]
-        # calculating the on-screen radius
-        screen_radius = int(entity.radius.asNumber() * camera.zoom_level)
-
-        if type(entity) == corbit.objects.Entity:
-            # entity drawing is the simplest, just a circle
-            pygame.draw.circle(screen, entity.color, screen_position, screen_radius)
-        elif type(entity) == corbit.objects.Habitat:
-            # habitat is the entity drawing, but with a line pointing forwards
-            pygame.draw.circle(screen, entity.color,
-                               screen_position, screen_radius)
-            pygame.draw.aaline(screen, (0, 255, 0), screen_position,
-                               [int(screen_position[0] + screen_radius * math.cos(entity.angular_position)),
-                                int(screen_position[1] + screen_radius * math.sin(entity.angular_position))])
-
-
-    # flip the screen upside down, so that y values increase upwards
-    screen.blit(pygame.transform.flip(screen, False, True), (0, 0))
     draw(screen)
     pygame.display.flip()
     screen.fill((0, 0, 0))

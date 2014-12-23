@@ -15,7 +15,7 @@
         { "name": "AC",
             "color": [255, 0, 0],
             "displacement": [-180, -75],
-            "velocity": [25, 0],
+            "velocity": [5, 0],
             "acceleration": [0, 0],
             "mass": 100,
             "radius": 8,

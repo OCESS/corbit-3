@@ -310,7 +310,7 @@ def json_serialize(entities, output_stream=None, pretty=False, json_sort_keys=Fa
                          indent=json_indent, sort_keys=json_sort_keys, separators=json_separators)
 
 
-def load(input_stream, entities):
+def load(input_stream):
     """Given a JSON string or a JSON stream of entities, parses into binary and returns
     :param input_stream: string or stream of Corbit format to parse
     :return: a list of entities
@@ -347,6 +347,7 @@ def load(input_stream, entities):
         #print(name, "angular acceleration", angular_acceleration)
         return (color, mass, radius, displacement, velocity, acceleration,
                 angular_position, angular_speed, angular_acceleration)
+    engine_systems = {}
 
     try:
         data = json_root["entities"]
@@ -381,7 +382,7 @@ def load(input_stream, entities):
                 break
             try:
                 color, mass, radius, displacement, velocity, acceleration, \
-                angular_position, angular_speed, angular_acceleration = load_entities(entity)
+                angular_position, angular_speed, angular_acceleration = load_entities(habitat)
                 engine_systems = {}
                 for system in habitat["engine systems"]:
                     engine_systems.update({system["class"]:
@@ -389,18 +390,20 @@ def load(input_stream, entities):
                                                             system["rated fuel flow"] * kg/s,
                                                             system["specific impulse"] * m/s,
                                                             system["placements"])})
+                    #print(name, "engine system", system)
 
                 json_entities.append(Habitat(name, color, mass, radius,
                                              displacement, velocity, acceleration,
                                              angular_position, angular_speed,
                                              angular_acceleration,
                                              engine_systems))
+                engine_systems = {}
             except KeyError:
                 print("habitat " + name + " has undefined elements, skipping...")
                 break
-
     except KeyError:
         print("no habitats found")
+
     return json_entities
 
 
@@ -443,11 +446,13 @@ if __name__ == "__main__":
 
         def test_json_serialization(self):
             # Always use json_sort_keys in asserts, otherwise it's undefined what order they come in
-            print(json_serialize([self.sample_entity], json_sort_keys=True, pretty=False))
             self.assertEqual(json_serialize([self.sample_habitat], pretty=False, json_sort_keys=True),
-                             '{"habitats":[{"acceleration":[1.0,1.0],"angular acceleration":-0.1,"angular position":0.1,"angular speed":1.5,"color":[255,0,0],"displacement":[-180,-75],"engine systems":[{"class":"rcs","fuel":100.0,"placements":[[0,[-1,0]],[1.57,[0,-1]],[3.14,[1,0]],[4.71,[0,1]]],"rated fuel flow":5.0,"specific impulse":3000.0},{"class":"main engines","fuel":1000.0,"placements":[[3.28,[1,0]],[3.0,[1,0]]],"rated fuel flow":100.0,"specific impulse":100.0}],"mass":1200.0,"name":"habitat","radius":8,"velocity":[25.0,0.0]}]}',
+                             '{"habitats":[{"acceleration":[1.0,1.0],"angular acceleration":-0.1,"angular position":0.1,"angular speed":1.5,"color":[255,0,0],"displacement":[-180,-75],"engine systems":[{"class":"main engines","fuel":1000.0,"placements":[[3.28,[1,0]],[3.0,[1,0]]],"rated fuel flow":100.0,"specific impulse":100.0},{"class":"rcs","fuel":100.0,"placements":[[0,[-1,0]],[1.57,[0,-1]],[3.14,[1,0]],[4.71,[0,1]]],"rated fuel flow":5.0,"specific impulse":3000.0}],"mass":1200.0,"name":"habitat","radius":8,"velocity":[25.0,0.0]}]}',
                              "I'm not serializing habitats properly")
-            self.assertEqual(json_serialize([self.sample_entity], json_sort_keys=True, pretty=False))
+            self.assertEqual(json_serialize([self.sample_entity], json_sort_keys=True, pretty=False),
+           '{"entities":[{"acceleration":[0.0,0.0],"angular acceleration":23.0,"angular position":21.0,"angular speed":22.0,"color":[0,255,0],"displacement":[-100,-60],"mass":100,"name":"earth i guess","radius":13,"velocity":[0.0,0.0]}]}',
+            "I'm not serializing entities correctly")
+
 
 
     unittest.main()
