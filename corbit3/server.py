@@ -1,10 +1,12 @@
 #! /usr/bin/env python3
+from corbit.mysqlio import load_json
 
 
 __version__ = "3.0.0"
 import corbit.network
 import corbit.physics
 import corbit.objects
+import corbit.mysqlio
 import scipy
 import unum.units as un
 import time
@@ -19,7 +21,8 @@ print("Corbit SERVER " + __version__)
 entities = []  # This object stores a list of all entities
 
 with open("saves/OCESS.json", "r") as loadfile:
-    entities = corbit.objects.load(loadfile)
+    entities = load_json(loadfile)
+corbit.mysqlio.init_db(entities, ("localhost","root","3.1415pi","corbit"))
 
 time_acc_index = 0
 time_acceleration = [1, 5, 10, 50, 100, 1000, 10000, 100000]
@@ -70,7 +73,6 @@ def act_on_piloting_commands(commands):
             else:
                 name, amount = argument.split(",")[0], float(argument.split(",")[1])
                 corbit.objects.find_entity(name, entities).main_engines.usage += amount
-
         elif function == "fire_rcs":
             if len(argument.split(",")) != 2:
                 print("Malformed argument, should have exactly one ',':", command)
@@ -95,7 +97,7 @@ def act_on_piloting_commands(commands):
             else:
                 filename = argument
                 with open(filename, "r") as loadfile:
-                    entities = corbit.objects.load(loadfile)
+                    entities = load_json(loadfile)
 
 
 pilot_commands = ""
@@ -106,6 +108,7 @@ def piloting_server():
     global pilot_commands
     global pilot_commands_lock
     global entities
+    while Tru
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serversocket.bind((socket.gethostname(), PORT))
     serversocket.listen(5)
@@ -146,16 +149,16 @@ ticker()
 while True:
     start_time = time.time()
 
-    # for A, B in itertools.combinations(entities, 2):
-    # gravity = corbit.physics.gravitational_force(A, B)
-    #        theta = angle(A, B)
-    #        A.accelerate(gravity, theta)
-    #        B.accelerate(-gravity, theta)
+    for A, B in itertools.combinations(entities, 2):
+        gravity = corbit.physics.gravitational_force(A, B)
+        theta = corbit.physics.angle(A, B)
+        A.accelerate(gravity, theta)
+        B.accelerate(-gravity, theta)
 
     collisions = []
     for A, B in itertools.combinations(entities, 2):
         affected_objects = corbit.physics.resolve_collision(A, B, time_per_tick())
-        if affected_objects != None:
+        if affected_objects is not None:
             collisions += affected_objects
 
     for entity in entities:
@@ -182,5 +185,3 @@ while True:
     if ticks_to_simulate <= 0:
         time.sleep(max(time_per_tick().asNumber(un.s) - (time.time() - start_time),
                        0))
-
-
