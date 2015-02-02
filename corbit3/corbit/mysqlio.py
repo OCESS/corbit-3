@@ -41,7 +41,7 @@ def load_json(input_stream):
     :param input_stream: string or stream of Corbit format to parse
     :return: a list of entities
     """
-    entity_id = 0
+    entity_guid = 0
     if isinstance(input_stream, str):  # Converts strings to streams just like that
         input_stream = io.StringIO(input_stream)
     json_root = json.load(input_stream)
@@ -58,10 +58,10 @@ def load_json(input_stream):
             try:
                 color, mass, radius, displacement, velocity, acceleration,\
                 angular_position, angular_speed, angular_acceleration = load_entities(entity)
-                json_entities.append(Entity(name, mass, radius, color,
-                                            displacement, velocity, acceleration,
-                                            angular_position, angular_speed,
-                                            angular_acceleration))
+                json_entities.append(
+                    Entity(name, mass, radius, color, displacement, velocity, acceleration, angular_position,
+                           angular_speed, angular_acceleration))
+                entity_guid += 1
             except KeyError:
                 print("entity " + name + " has undefined elements, skipping...")
                 break
@@ -79,24 +79,12 @@ def load_json(input_stream):
             try:
                 color, mass, radius, displacement, velocity, acceleration, \
                     angular_position, angular_speed, angular_acceleration = load_entities(habitat)
-                engine_system = EngineSystem(habitat["main fuel"] * kg,
-                                          5 * kg/s,
-                                          3000 * m/s,
-                                          [[3.28, [1,0]],
-                                           [3.0, [1, 0]]])
-                rcs_system = EngineSystem(habitat["rcs fuel"] * kg,
-                                          5 * kg/s,
-                                          3000 * m/s,
-                                          [[0.0, [-1,0]],
-                                           [1.57, [0,-1]],
-                                           [3.14, [1,0]],
-                                           [4.71, [0,1]]])
-                #print(name, "engine system", system)
-                json_entities.append(Habitat(entity_guid, name, mass, radius, color,
-                                             displacement, velocity, acceleration,
-                                             angular_position, angular_speed,
-                                             angular_acceleration,
-                                             engine_system, rcs_system))
+                main_fuel = habitat["main fuel"]
+                rcs_fuel = habitat["rcs fuel"]
+                json_entities.append(
+                    Habitat(name, mass, radius, color, displacement, velocity, acceleration, angular_position,
+                            angular_speed, angular_acceleration, main_fuel, rcs_fuel))
+                entity_guid += 1
             except KeyError:
                 print("habitat " + name + " has undefined elements, skipping...")
                 break
@@ -117,7 +105,7 @@ def flush_db(entities, db_info):
     # you can just not run this function, and then and then load whatever is in
     db_cursor.execute("DROP TABLE IF EXISTS flight")
     db_cursor.execute("""CREATE TABLE flight (
-        TYPE CHAR(64) NOT NULL, NAME CHAR(64) NOT NULL, MASS DOUBLE NOT NULL, RADIUS DOUBLE NOT NULL,
+        GUID INT NOT NULL PRIMARY KEY, TYPE CHAR(64) NOT NULL, NAME CHAR(64) NOT NULL, MASS DOUBLE NOT NULL, RADIUS DOUBLE NOT NULL,
         COLORR INT NOT NULL, COLORG INT NOT NULL, COLORB INT NOT NULL,
         POSX DOUBLE NOT NULL, POSY DOUBLE NOT NULL, VX DOUBLE NOT NULL, VY DOUBLE NOT NULL,
         ACCX DOUBLE NOT NULL, ACCY DOUBLE NOT NULL,
@@ -136,14 +124,15 @@ def connect_to_db(db_info):
 def push_entities(entities):
     db_cursor.execute("TRUNCATE TABLE flight")
     list_of_values = []
+    sql_code = """INSERT INTO flight(
+            GUID, TYPE, NAME, MASS, RADIUS, COLORR, COLORG, COLORB, POSX, POSY, VX, VY, ACCX, ACCY, ANGPOS, ANGV, ANGACC, FUEL, RCSFUEL)
+            VALUES"""
     for entity in entities:
-        header = """INSERT INTO flight(
-            TYPE, NAME, MASS, RADIUS, COLORR, COLORG, COLORB, POSX, POSY, VX, VY, ACCX, ACCY, ANGPOS, ANGV, ANGACC, FUEL, RCSFUEL"""
+        fields = """ (
+            %d,   '%s', '%s', %f,   %f,     %d,     %d,     %d,     %f,   %f,   %f, %f, %f,   %f,   %f,     %f,   %f,     %f,   %f),"""
 
-        fields = """ VALUES(
-            '%s', '%s', %f,   %f,     %d,     %d,     %d,     %f,   %f,   %f, %f, %f,   %f,   %f,     %f,   %f,     %f,   %f"""
-
-        values = (entity.name,
+        values = (entity.guid,
+                  entity.name,
                   entity.mass_fun().asNumber(kg),
                   entity.radius.asNumber(m),
                   entity.color[0],
@@ -158,15 +147,21 @@ def push_entities(entities):
                   entity.angular_position.asNumber(rad),
                   entity.angular_speed.asNumber(rad/s),
                   entity.angular_acceleration.asNumber(rad/s/s))
-        try:
-            values += (entity.engine_system.fuel.asNumber(kg), entity.rcs_system.fuel.asNumber(kg),)
-        except AttributeError:
+        if type(entity) is Entity:
+            values = ("entity",) + values
             values += (0,0,)
-        list_of_values.append(values)
+        else:
+            values = ("habitat",) + values
+            values += (entity.engine_system.fuel.asNumber(kg), entity.rcs_system.fuel.asNumber(kg),)
+        sql_code += fields % values
     try:
-        db_cursor.execute((header + fields) % values)
+        sql_code = sql_code[:-1] # removes the last ","
+        db_cursor.execute("START TRANSACTION")
+        db_cursor.execute("TRUNCATE TABLE flight")
+        db_cursor.execute(sql_code)
         db.commit()
     except Exception as excp:
+        print(sql_code)
         print("HELP", excp, entity.name)
         db.rollback()
 
@@ -179,15 +174,15 @@ def get_entities():
         # that is true, but everything just comes in the order that the columns are in:
         # TYPE, NAME, MASS, RADIUS, COLORR, COLORG, COLORB, POSX, POSY, VX, VY, ACCX, ACCY, ANGPOS, ANGV, ANGACC,
         # (FUEL, RCSFUEL)
-        if entity[0] == "entity":
-            retrieved_entities.append(Entity(entity[1], entity[2], entity[3], (entity[4], entity[5], entity[6]),
-                                             [entity[7], entity[8]], [entity[9], entity[10]], [entity[11], entity[12]],
-                                             entity[13], entity[14], entity[15]))
+        if entity[1] == "entity":
+            retrieved_entities.append(
+                Entity(entity[0], entity[1], entity[2], entity[3], (entity[4], entity[5], entity[6]), [entity[7], entity[8]],
+                       [entity[9], entity[10]], [entity[11], entity[12]], entity[13], entity[14], entity[15]))
         elif entity[1] == "habitat":
-            retrieved_entities.append(Habitat(entity[1], entity[2], entity[3], (entity[4], entity[5], entity[6]),
-                                              [entity[7], entity[8]], [entity[9], entity[10]], [entity[11], entity[12]],
-                                              entity[13], entity[14], entity[15],
-                                              entity[16], entity[17]))
+            retrieved_entities.append(
+                Habitat(entity[0], entity[1], entity[2], entity[3], (entity[4], entity[5], entity[6]), [entity[7], entity[8]],
+                        [entity[9], entity[10]], [entity[11], entity[12]], entity[13], entity[14], entity[15],
+                        entity[16]))
     return retrieved_entities
 
 def push_commands(list_of_commands):
@@ -204,6 +199,7 @@ def push_commands(list_of_commands):
         db_cursor.execute("INSERT INTO flightcommands(COMMAND, TARGET, AMOUNT) " + values)
 
 def pop_commands():
+    commands = []
     try:
         db_cursor.execute("SELECT * FROM pilotcommands")
         commands = db_cursor.fetchall()
