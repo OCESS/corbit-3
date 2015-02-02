@@ -1,11 +1,10 @@
 #! /usr/bin/env python3
-from corbit.mysqlio import load_json
-
 
 __version__ = "3.0.0"
 import corbit.physics
 import corbit.objects
 import corbit.network
+import corbit.mysqlio
 import sys  # used to exit the program
 import pygame  # used for drawing and a couple other things
 import pygame.locals as gui  # for things like KB_LEFT
@@ -14,14 +13,16 @@ import unum.units as un
 import scipy
 import numpy.linalg as LA
 import math
-import socket  # used to communicate with the server
-import time
 
 import pygame.gfxdraw
 print("Corbit PILOT " + __version__)
 fps = 60 * un.Hz
 entities = []  # this list will store all the entities
-PORT = 3415
+ADDRESS = "localhost"
+print("alright come over her")
+corbit.mysqlio.connect_to_db((ADDRESS, "root", "3.1415pi", "corbit"))
+print("hey what are u doing")
+
 
 # just setting up the display and window here
 screen_size = (681, 745)
@@ -33,22 +34,12 @@ screen = pygame.display.set_mode(screen_size, display_flags)
 pygame.display.set_caption("Corbit " + __version__)
 pygame.key.set_repeat(800, 25)
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.settimeout(8)
-connection_established = False
-while not connection_established is None:
-    print("Connecting to server...")
-    try:
-        connection_established = sock.connect((socket.gethostname(), PORT))
-    except (ConnectionRefusedError, ConnectionAbortedError) as e:
-        print(e)
-        print("Could not connect to server, retrying...")
-        time.sleep(1)
-
 camera = corbit.objects.Camera(0.0001, corbit.objects.center)
 screen_size = screen.get_size()
 screen = pygame.display.set_mode(screen_size, display_flags)
+#TODO: I'm trying to set the default format string, but I haven't found the right variable to change yet
 unum.Unum.VALUE_FORMAT = "%8.2f"
+
 
 
 def draw(display):
@@ -128,7 +119,7 @@ def draw(display):
        LA.norm((corbit.objects.find_entity(corbit.objects.control, entities).acceleration -
                 corbit.physics.gravitational_force(corbit.objects.find_entity(corbit.objects.control, entities),
                                                    corbit.objects.find_entity(corbit.objects.reference, entities))
-                /corbit.objects.find_entity(corbit.objects.control, entities).mass()).asNumber(un.m/un.s/un.s))).__str__()),
+                /corbit.objects.find_entity(corbit.objects.control, entities).mass_fun()).asNumber(un.m/un.s/un.s))).__str__()),
      ("Rotation:",
       corbit.objects.find_entity(corbit.objects.control, entities).angular_speed.__str__()),
      ("Torque:",
@@ -158,7 +149,14 @@ def draw(display):
 
 
 while True:
+    print("i didnt sign up 4 this")
+    entities = corbit.mysqlio.get_entities()
+    print("ber")
 
+    # commands_to_send is a : list of (COMMAND, TARGET, AMOUNT) 3-tuples
+    # of type                         (string,  string, float)
+    # whenever a command is appended, that command is written to the corbit.flightcommands table
+    # where the server checks for a command and acts on it
     commands_to_send = []
 
     for event in pygame.event.get():
@@ -209,21 +207,21 @@ while True:
             elif event.unicode == ",":
                 commands_to_send.append(("accelerate_time", -1,))
             elif event.unicode == "r":
-                commands_to_send += "open|saves/OCESS.json "
+                commands_to_send.append(("open", "saves/OCESS.json",))
 
-    if commands_to_send: print(commands_to_send)
-    corbit.network.sendall(commands_to_send.strip(), sock)
-
-    entities = load_json(corbit.network.recvall(sock))
+    if commands_to_send:
+        print(commands_to_send)
+        corbit.mysqlio.push_commands(commands_to_send)
 
     camera.move(1/fps)
+    print(corbit.objects.find_entity("Sun", entities))
+    print(camera.center)
     camera.update(corbit.objects.find_entity(camera.center, entities))
 
+    print("guys hakp")
     draw(screen)
     pygame.display.flip()
     screen.fill((0, 0, 0))
 
     # time.sleep(1/fps.asNumber(Hz))
     # time.sleep(1/fps.asNumber(Hz) - time_spent_on_last_frame)
-
-sock.close()

@@ -24,7 +24,7 @@ def angle(A, B):
 
 def gravitational_force(A, B):
     unit_distance = scipy.array([math.cos(angle(A, B)), math.sin(angle(A, B))])
-    return G * A.mass() * B.mass() / distance(A, B)**2 * unit_distance
+    return G * A.mass_fun() * B.mass_fun() / distance(A, B)**2 * unit_distance
 
 def Vcen(A, B):
     dist = A.displacement - B.displacement
@@ -39,16 +39,16 @@ def Vtan(A, B):
     return m/s * scipy.dot(dist_tan/scipy.linalg.norm(dist_tan), (A.velocity - B.velocity).asNumber(m/s))
 
 def Vorbit(A, B):
-    return m/s * math.sqrt(((B.mass()**2 * G) / ((A.mass() + B.mass()) * distance(A, B))).asNumber(m**2/s/s))
+    return m/s * math.sqrt(((B.mass_fun()**2 * G) / ((A.mass_fun() + B.mass_fun()) * distance(A, B))).asNumber(m**2/s/s))
 
 def semimajor_axis(A, B):
-    mu = G * (A.mass() + B.mass())    # G(m + M)
+    mu = G * (A.mass_fun() + B.mass_fun())    # G(m + M)
     E = (magnitude(A.velocity - B.velocity, m/s)**2/2) - mu/magnitude(A.displacement - B.displacement, m)
     return -mu/2/E  # -mu/2E
 
 def ecc(A, B):
     # this is all from the wikipedia orbital eccentricity page, btw: http://en.wikipedia.org/wiki/Orbital_eccentricity
-    mu = G * (A.mass() + B.mass())    # G(m + M)
+    mu = G * (A.mass_fun() + B.mass_fun())    # G(m + M)
     E = -mu/2/semimajor_axis(A, B)  # -mu/2a
     h = (distance(A, B) * Vtan(A, B))    # r * Vtan
     return math.sqrt(1+(2*E*h**2)/(mu**2))    # sqrt(1 + (2Eh^2)/(mu^2))
@@ -142,12 +142,12 @@ def resolve_collision(A, B, time):
     R = 0.1
 
     vAn_ = \
-        (A.mass() * vAn + B.mass() * vBn + R * B.mass() * (B.velocity - A.velocity)) / \
-        (A.mass() + B.mass())
+        (A.mass_fun() * vAn + B.mass_fun() * vBn + R * B.mass_fun() * (B.velocity - A.velocity)) / \
+        (A.mass_fun() + B.mass_fun())
 
     vBn_ = \
-        (A.mass() * vAn + B.mass() * vBn + R * A.mass() * (A.velocity - B.velocity)) / \
-        (A.mass() + B.mass())
+        (A.mass_fun() * vAn + B.mass_fun() * vBn + R * A.mass_fun() * (A.velocity - B.velocity)) / \
+        (A.mass_fun() + B.mass_fun())
 
     # convert scalar normal and tangent velocities to vector quantities
     VAn = vAn_ * un
