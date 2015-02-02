@@ -136,7 +136,7 @@ def draw(display):
                                corbit.objects.find_entity(corbit.objects.reference, entities)).__str__()),
      ("",""),
      ("Fuel:",
-      corbit.objects.find_entity(corbit.objects.control, entities).engine_systems["main engines"].fuel.__str__()),
+      corbit.objects.find_entity(corbit.objects.control, entities).engine_system.fuel.__str__()),
      ("Zoom:",
       camera.zoom_level.__str__())
     ]
@@ -147,11 +147,9 @@ def draw(display):
     for text in lines_to_draw:
         line_number = print_text(text, line_number, field_padding, display)
 
-
 while True:
-    print("i didnt sign up 4 this")
-    entities = corbit.mysqlio.get_entities()
-    print("ber")
+    while not entities:
+        entities = corbit.mysqlio.get_entities()
 
     # commands_to_send is a : list of (COMMAND, TARGET, AMOUNT) 3-tuples
     # of type                         (string,  string, float)
@@ -214,11 +212,10 @@ while True:
         corbit.mysqlio.push_commands(commands_to_send)
 
     camera.move(1/fps)
-    print(corbit.objects.find_entity("Sun", entities))
+    #print(corbit.objects.find_entity("Sun", entities))
     print(camera.center)
     camera.update(corbit.objects.find_entity(camera.center, entities))
 
-    print("guys hakp")
     draw(screen)
     pygame.display.flip()
     screen.fill((0, 0, 0))
