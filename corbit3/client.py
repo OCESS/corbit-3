@@ -147,6 +147,8 @@ def draw(display):
     for text in lines_to_draw:
         line_number = print_text(text, line_number, field_padding, display)
 
+while not entities:
+    entities = corbit.mysqlio.get_entities()
 while True:
     while not entities:
         entities = corbit.mysqlio.get_entities()
@@ -213,7 +215,6 @@ while True:
 
     camera.move(1/fps)
     #print(corbit.objects.find_entity("Sun", entities))
-    print(camera.center)
     camera.update(corbit.objects.find_entity(camera.center, entities))
 
     draw(screen)
