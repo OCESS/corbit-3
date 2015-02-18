@@ -4,14 +4,18 @@ Corbit
 This is a spaceflight simulator, programmed in Python. This specific repo is the
 third major version of Corbit
 
+System Requirements
+-------------------
+
+You’re going to need a MySQL server running. Also Python 3. Please and thank you.
 
 How do I fly this thing?
-------------
+------------------------
 
 Python distribution is hard, so everything is included. Just `cd` to corbit3/ and do one of `python server.py` or `python client.py`. I know,
 but I wouldn’t have done it if there were an easier way that will for sure work for everyone.
 
-Project Structure
+Table of Contents
 -----------------
 
 `corbit3/saves/`			this directory contains all data files that Corbit can load  
