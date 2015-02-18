@@ -1,11 +1,15 @@
-from unum.units import rad, m, s, kg, N
-import scipy
-from scipy import linalg as LA
 import math
 import json
-import io
-import collections
 
+import scipy
+from scipy import linalg as LA
+
+from unum.units import rad, m, s, kg, N
+
+
+center = "Habitat"
+control = "Habitat"
+reference = "Earth"
 
 class Camera:
     """Used to store the zoom level and position of the display's camera. Change this to change the viewpoint"""
@@ -56,29 +60,50 @@ class Camera:
 class Entity:
     """Base class for all physical objects"""
 
-    def __init__(self, name, color, mass, radius,
-                 displacement, velocity, acceleration,
-                 angular_position, angular_speed, angular_acceleration):
-        self.name = name  # should be a string
-        self.color = color  # should be a tuple, e.g. (255,255,5)
-        self.dry_mass = mass  # should be in units of kg
-        self.radius = radius  # should be in units of m
+    def __init__(self, name, mass, radius, color, displacement, velocity, acceleration, angular_position, angular_speed,
+                 angular_acceleration):
+        assert isinstance(name, str), name + " is not a str"
+        self.name = name
+        assert isinstance(color, (tuple, list)), color.__str__() + " is not a tuple"
+        assert color.__len__() == 3, color.__str__() + " is not a 3-tuple"
+        self.color = color
+        assert isinstance(mass, (int, float)), mass.__str__() + " is not a float"
+        assert mass > 0, mass.__str__() + " is nonpositive"
+        self.dry_mass = mass * kg
+        assert isinstance(radius, (int, float)), radius.__str__() + " is not a float"
+        assert radius > 0, radius.__str__() + " is nonpositive"
+        self.radius = radius * m
 
-        self.displacement = displacement  # should be in units of m
-        self.velocity = velocity  # should be in units of m/s
-        self.acceleration = acceleration  # should be in units of m/s/s
+        assert isinstance(displacement, list), displacement.__str__() + " is not a vector"
+        assert displacement.__len__() == 2, displacement.__str__() + " is not 2D"
+        assert isinstance(displacement[0], (int, float)), displacement.__str__() + "'s x is not a float"
+        assert isinstance(displacement[1], (int, float)), displacement.__str__() + "'s y is not a float"
+        self.displacement = m * scipy.array(displacement)
+        assert isinstance(velocity, list), velocity.__str__() + " is not a vector"
+        assert velocity.__len__() == 2, velocity.__str__() + " is not 2D"
+        assert isinstance(velocity[0], (int, float)), velocity.__str__() + "'s x is not a float"
+        assert isinstance(velocity[1], (int, float)), velocity.__str__() + "'s y is not a float"
+        self.velocity = m/s * scipy.array(velocity)
+        assert isinstance(acceleration, list), acceleration.__str__() + " is not a vector"
+        assert acceleration.__len__() == 2, acceleration.__str__() + " is not 2D"
+        assert isinstance(acceleration[0], (int, float)), acceleration.__str__() + "'s x is not a float"
+        assert isinstance(acceleration[1], (int, float)), acceleration.__str__() + "'s y is not a float"
+        self.acceleration = m/s/s * scipy.array(acceleration)
 
-        self.angular_position = angular_position  # units: radians
-        self.angular_speed = angular_speed  # units: radians/s
-        self.angular_acceleration = angular_acceleration  # units: radians/s/s
+        assert isinstance(angular_position, (int, float)), angular_position.__str__() + " is not a float"
+        self.angular_position = angular_position * rad
+        assert isinstance(angular_speed, (int, float)), angular_speed.__str__() + " is not a float"
+        self.angular_speed = angular_speed * rad/s
+        assert isinstance(angular_acceleration, (int, float)), angular_acceleration.__str__() + " is not a float"
+        self.angular_acceleration = angular_acceleration * rad/s/s
 
-    def mass(self):
+    def mass_fun(self):
         """Getter function for mass, will be overriden in Entity-derived classes"""
         return self.dry_mass
 
     def moment_of_inertia(self):
         """Returns the entity's moment of inertia, which is that of a sphere"""
-        return (2 * self.mass() * self.radius ** 2) / 5
+        return (2 * self.mass_fun() * self.radius ** 2) / 5
 
     def accelerate(self, force, angle):
         """
@@ -105,7 +130,7 @@ class Entity:
         # a is linear acceleration, m is mass of entity
         # F is the force that is used in making linear acceleration
         F_cen = force * abs(math.cos(angle - F_theta))
-        self.acceleration += F_cen / self.mass()
+        self.acceleration += F_cen / self.mass_fun()
         # if LA.norm(F_cen.asNumber()) != 0:
         # print(F_cen)
 
@@ -134,14 +159,13 @@ class Entity:
         self.angular_acceleration = 0 * rad / s / s
         self.angular_position += self.angular_speed * time
 
-    def dict_repr(self):
+    def __repr__(self):
         """Returns a dictionary representation of the Entity, with all the data needed to
         reconstruct it again"""
-
         return {
             "name": self.name,
             "color": self.color,
-            "mass": self.mass().asNumber(),
+            "mass": self.mass_fun().asNumber(),
             "radius": self.radius.asNumber(),
             "displacement": self.displacement.asNumber().tolist(),
             "velocity": self.velocity.asNumber().tolist(),
@@ -200,53 +224,57 @@ class EngineSystem:
     def dict_repr(self):
         """Returns a dictionary with all the values that are needed to construct this again
         contained within the dict"""
-        return {"fuel": self.fuel.asNumber(kg),
+        #TODO: don't use this, I'm moving to MySQL at which point I need only save my fuel
+        #to the JSON file, since Isp and fuel flow will be hardcoded
+        """return {"fuel": self.fuel.asNumber(kg),
                 "rated fuel flow": self.rated_fuel_flow.asNumber(kg/s),
                 "specific impulse": self.I_sp.asNumber(m/s),
-                "placements": self.engine_placements}
+                "placements": self.engine_placements}"""
 
 
 class Habitat(Entity):
     """A special class for the habitat"""
 
-    def __init__(self, name, color, mass, radius,
-                 displacement, velocity, acceleration,
-                 angular_position, angular_speed, angular_acceleration,
-                 engine_systems):
-        Entity.__init__(self, name, color, mass, radius,
-                        displacement, velocity, acceleration,
-                        angular_position, angular_speed, angular_acceleration)
+    def __init__(self, name, mass, radius, color, displacement, velocity, acceleration, angular_position,
+                 angular_speed, angular_acceleration, main_fuel, rcs_fuel):
+        Entity.__init__(self, name, mass, radius, color, displacement, velocity, acceleration, angular_position,
+                        angular_speed, angular_acceleration)
+        self.engine_system = EngineSystem(main_fuel * kg,
+                                          5 * kg/s,
+                                          3000 * m/s,
+                                          [[3.28, [1,0]],
+                                           [3.0, [1, 0]]])
+        self.rcs_system = EngineSystem(rcs_fuel * kg,
+                                       5 * kg/s,
+                                       3000 * m/s,
+                                       [[0.0, [-1,0]],
+                                        [1.57, [0,-1]],
+                                        [3.14, [1,0]],
+                                        [4.71, [0,1]]])
 
-        self.engine_systems = engine_systems
-
-    def mass(self):
-        fuel_mass = 0 * kg
-        for system in self.engine_systems.values(): fuel_mass += system.fuel
+    def mass_fun(self):
+        fuel_mass = self.engine_system.fuel + self.rcs_system.fuel
         return self.dry_mass + fuel_mass
 
     def move(self, time):
         """Accelerates habitat from main engine thrust, then moves the habitat normally"""
         #todo: move this code into a server loop
 
-#         thrust = self.main_engines.thrust(time)
-#         thrust_vector = \
-#             N * scipy.array((math.cos(self.angular_position) * thrust.asNumber(N),
-#                              math.sin(self.angular_position) * thrust.asNumber(N)))
-#         for angle in self.main_engines.engine_positions:
-#             self.accelerate(
-#                 thrust_vector / len(self.main_engines.engine_positions),
-#                angle + self.angular_position)
+        #         thrust = self.main_engines.thrust(time)
+        #         thrust_vector = \
+        #             N * scipy.array((math.cos(self.angular_position) * thrust.asNumber(N),
+        #                              math.sin(self.angular_position) * thrust.asNumber(N)))
+        #         for angle in self.main_engines.engine_positions:
+        #             self.accelerate(
+        #                 thrust_vector / len(self.main_engines.engine_positions),
+        #                angle + self.angular_position)
 
         Entity.move(self, time)
 
-    def dict_repr(self):
-        blob = Entity.dict_repr(self)
-        engine_systems = []
-        for engine_class, data in self.engine_systems.items():
-            json_obj = data.dict_repr()
-            json_obj["class"] = engine_class
-            engine_systems.append(json_obj)
-        blob.update({"engine systems": engine_systems})
+    def __repr__(self):
+        blob = Entity.__repr__(self)
+        blob["main fuel"] = self.engine_system.fuel
+        blob["rcs fuel"] = self.rcs_system.fuel
         return blob
 
 
@@ -292,9 +320,9 @@ def json_serialize(entities, output_stream=None, pretty=False, json_sort_keys=Fa
 
     for entity in entities:
         if type(entity) is Habitat:
-            json_data["habitats"].append(entity.dict_repr())
+            json_data["habitats"].append(entity.__repr__())
         elif type(entity) is Entity:
-            json_data["entities"].append(entity.dict_repr())
+            json_data["entities"].append(entity.__repr__())
         else:
             print("found something in entities list that isn't a recognized entity or derivative work,", entity.name)
 
@@ -303,156 +331,12 @@ def json_serialize(entities, output_stream=None, pretty=False, json_sort_keys=Fa
     if not json_data["entities"]:
         del json_data["entities"]
 
-    if output_stream == None:
+    if output_stream is None:
         return json.dumps(json_data, indent=json_indent, sort_keys=json_sort_keys, separators=json_separators)
     else:
         return json.dump(json_data, output_stream,
                          indent=json_indent, sort_keys=json_sort_keys, separators=json_separators)
 
 
-def load(input_stream):
-    """Given a JSON string or a JSON stream of entities, parses into binary and returns
-    :param input_stream: string or stream of Corbit format to parse
-    :return: a list of entities
-    """
-    if isinstance(input_stream, str):  # Converts strings to streams just like that
-        input_stream = io.StringIO(input_stream)
-    json_root = json.load(input_stream)
-    json_entities = []
-
-    def load_entities(json_object):
-        # protip: uncomment all those print lines if you want to find out where
-        # a given object has undefined elements. Pretty handy. I spent several hours
-        # figuring out what was happening until I put those print statements in,
-        # and it turned out my server was sending fields like "angular_speed" instead
-        # of "angular speed"
-        # I should really make unit tests
-        color = json_object["color"]
-        #print(name, "color", color)
-        mass = kg * json_object["mass"]
-        #print(name, "mass", mass)
-        radius = m * json_object["radius"]
-        #print(name, "radius", radius)
-        displacement = m * scipy.array(json_object["displacement"])
-        #print(name, "displacement", displacement)
-        velocity = m/s * scipy.array(json_object["velocity"])
-        #print(name, "velocity", velocity)
-        acceleration = m/s/s * scipy.array(json_object["acceleration"])
-        #print(name, "acceleration", acceleration)
-        angular_position = rad * json_object["angular position"]
-        #print(name, "angular position", angular_position)
-        angular_speed = rad/s * json_object["angular speed"]
-        #print(name, "angular speed", angular_speed)
-        angular_acceleration = rad/s/s * json_object["angular acceleration"]
-        #print(name, "angular acceleration", angular_acceleration)
-        return (color, mass, radius, displacement, velocity, acceleration,
-                angular_position, angular_speed, angular_acceleration)
-    engine_systems = {}
-
-    try:
-        data = json_root["entities"]
-        for entity in data:
-            try:
-                name = entity["name"]
-            except:
-                print("unnamed entity found, skipping")
-                break
-            try:
-                color, mass, radius, displacement, velocity, acceleration,\
-                angular_position, angular_speed, angular_acceleration = load_entities(entity)
-
-                json_entities.append(Entity(name, color, mass, radius,
-                                            displacement, velocity, acceleration,
-                                            angular_position, angular_speed,
-                                            angular_acceleration))
-            except KeyError:
-                print("entity " + name + " has undefined elements, skipping...")
-                break
-
-    except KeyError:
-        print("no entities found")
-
-    try:
-        data = json_root["habitats"]
-        for habitat in data:
-            try:
-                name = habitat["name"]
-            except KeyError:
-                print("unnamed habitat found, skipping")
-                break
-            try:
-                color, mass, radius, displacement, velocity, acceleration, \
-                angular_position, angular_speed, angular_acceleration = load_entities(habitat)
-                engine_systems = {}
-                for system in habitat["engine systems"]:
-                    engine_systems.update({system["class"]:
-                                               EngineSystem(system["fuel"] * kg,
-                                                            system["rated fuel flow"] * kg/s,
-                                                            system["specific impulse"] * m/s,
-                                                            system["placements"])})
-                    #print(name, "engine system", system)
-
-                json_entities.append(Habitat(name, color, mass, radius,
-                                             displacement, velocity, acceleration,
-                                             angular_position, angular_speed,
-                                             angular_acceleration,
-                                             engine_systems))
-                engine_systems = {}
-            except KeyError:
-                print("habitat " + name + " has undefined elements, skipping...")
-                break
-    except KeyError:
-        print("no habitats found")
-
-    return json_entities
 
 
-if __name__ == "__main__":
-    import unittest
-
-    class TestObjects(unittest.TestCase):
-        def setUp(self):
-            self.sample_habitat = \
-            Habitat("habitat", (255, 0, 0), 100*kg, 8*m,
-                    m*scipy.array((-180, -75)), m/s*scipy.array((25, 0)), m/s/s*scipy.array((1, 1)),
-                    0.1*rad, 1.5*rad/s, -0.1*rad/s/s,
-                    {"rcs":
-                         EngineSystem(100*kg, 5*kg/s, 3000*m/s, [[0, [-1, 0]],
-                                                                 [1.57, [0, -1]],
-                                                                 [3.14, [1, 0]],
-                                                                 [4.71, [0, 1]]]),
-                     "main engines":
-                         EngineSystem(1000*kg, 100*kg/s, 100*m/s, [[3.28, [1, 0]],
-                                                                   [3.0, [1, 0]]])})
-
-            self.sample_entity = \
-                Entity("earth i guess", (0, 255, 0), 100*kg, 13*m,
-                       m*scipy.array((-100, -60)), m/s*scipy.array((0, 0)), m/s/s*scipy.array((0, 0)),
-                       21*rad, 22*rad/s, 23*rad/s/s)
-
-        def test_find_entity(self):
-            self.assertEqual(find_entity("earth i guess", [self.sample_entity]),
-                             self.sample_entity,
-                             "I wouldn't know my own planet if it smacked me in the face")
-            self.assertEqual(find_entity("habitat", [self.sample_habitat]),
-                             self.sample_habitat,
-                             "I wouldn't know a habitat if it smacked me in the face")
-            self.assertEqual(find_entity("alex likes puppet bums", [self.sample_habitat]),
-                             None,
-                             "I was able to find an entity when I shouldn't have")
-            self.assertEqual(find_entity("habitat", [self.sample_habitat, self.sample_entity]),
-                             self.sample_habitat,
-                             "I can't handle more than one element in a list")
-
-        def test_json_serialization(self):
-            # Always use json_sort_keys in asserts, otherwise it's undefined what order they come in
-            self.assertEqual(json_serialize([self.sample_habitat], pretty=False, json_sort_keys=True),
-                             '{"habitats":[{"acceleration":[1.0,1.0],"angular acceleration":-0.1,"angular position":0.1,"angular speed":1.5,"color":[255,0,0],"displacement":[-180,-75],"engine systems":[{"class":"main engines","fuel":1000.0,"placements":[[3.28,[1,0]],[3.0,[1,0]]],"rated fuel flow":100.0,"specific impulse":100.0},{"class":"rcs","fuel":100.0,"placements":[[0,[-1,0]],[1.57,[0,-1]],[3.14,[1,0]],[4.71,[0,1]]],"rated fuel flow":5.0,"specific impulse":3000.0}],"mass":1200.0,"name":"habitat","radius":8,"velocity":[25.0,0.0]}]}',
-                             "I'm not serializing habitats properly")
-            self.assertEqual(json_serialize([self.sample_entity], json_sort_keys=True, pretty=False),
-           '{"entities":[{"acceleration":[0.0,0.0],"angular acceleration":23.0,"angular position":21.0,"angular speed":22.0,"color":[0,255,0],"displacement":[-100,-60],"mass":100,"name":"earth i guess","radius":13,"velocity":[0.0,0.0]}]}',
-            "I'm not serializing entities correctly")
-
-
-
-    unittest.main()

@@ -5,15 +5,11 @@ This is a spaceflight simulator, programmed in Python. This specific repo is the
 third major version of Corbit
 
 
-Requirements
+How do I fly this thing?
 ------------
 
-By running `sudo python setup.py install` everything should be installed for you wow isn’t that cool
-
-Installation
-------------
-
-`sudo python setup.py install` installs the required libraries. Then, run `server.py` from `corbit3` and `client.py` from `corbit3`.
+Python distribution is hard, so everything is included. Just `cd` to corbit3/ and do one of `python server.py` or `python client.py`. I know,
+but I wouldn’t have done it if there were an easier way that will for sure work for everyone.
 
 Project Structure
 -----------------
