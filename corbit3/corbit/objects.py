@@ -60,10 +60,8 @@ class Camera:
 class Entity:
     """Base class for all physical objects"""
 
-    def __init__(self, guid, name, mass, radius, color, displacement, velocity, acceleration, angular_position, angular_speed,
+    def __init__(self, name, mass, radius, color, displacement, velocity, acceleration, angular_position, angular_speed,
                  angular_acceleration):
-        assert isinstance(guid, int), guid.__str__() + " is not an int"
-        self.guid = guid
         assert isinstance(name, str), name + " is not a str"
         self.name = name
         assert isinstance(color, (tuple, list)), color.__str__() + " is not a tuple"
@@ -237,9 +235,9 @@ class EngineSystem:
 class Habitat(Entity):
     """A special class for the habitat"""
 
-    def __init__(self, guid, name, mass, radius, color, displacement, velocity, acceleration, angular_position,
+    def __init__(self, name, mass, radius, color, displacement, velocity, acceleration, angular_position,
                  angular_speed, angular_acceleration, main_fuel, rcs_fuel):
-        Entity.__init__(self, guid, name, mass, radius, color, displacement, velocity, acceleration, angular_position,
+        Entity.__init__(self, name, mass, radius, color, displacement, velocity, acceleration, angular_position,
                         angular_speed, angular_acceleration)
         self.engine_system = EngineSystem(main_fuel * kg,
                                           5 * kg/s,

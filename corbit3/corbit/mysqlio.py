@@ -105,7 +105,7 @@ def flush_db(entities, db_info):
     # you can just not run this function, and then and then load whatever is in
     db_cursor.execute("DROP TABLE IF EXISTS flight")
     db_cursor.execute("""CREATE TABLE flight (
-        GUID INT NOT NULL PRIMARY KEY, TYPE CHAR(64) NOT NULL, NAME CHAR(64) NOT NULL, MASS DOUBLE NOT NULL, RADIUS DOUBLE NOT NULL,
+        TYPE CHAR(64) NOT NULL, NAME CHAR(64) NOT NULL, MASS DOUBLE NOT NULL, RADIUS DOUBLE NOT NULL,
         COLORR INT NOT NULL, COLORG INT NOT NULL, COLORB INT NOT NULL,
         POSX DOUBLE NOT NULL, POSY DOUBLE NOT NULL, VX DOUBLE NOT NULL, VY DOUBLE NOT NULL,
         ACCX DOUBLE NOT NULL, ACCY DOUBLE NOT NULL,
@@ -113,6 +113,7 @@ def flush_db(entities, db_info):
         FUEL DOUBLE, RCSFUEL DOUBLE)""")
     db_cursor.execute("DROP TABLE IF EXISTS flightcommands")
     db_cursor.execute("""CREATE TABLE flightcommands ( COMMAND CHAR(64) NOT NULL, TARGET CHAR(64), AMOUNT DOUBLE)""")
+    db.commit()
 
 def connect_to_db(db_info):
     global db
@@ -122,17 +123,15 @@ def connect_to_db(db_info):
 
 
 def push_entities(entities):
-    db_cursor.execute("TRUNCATE TABLE flight")
     list_of_values = []
     sql_code = """INSERT INTO flight(
-            GUID, TYPE, NAME, MASS, RADIUS, COLORR, COLORG, COLORB, POSX, POSY, VX, VY, ACCX, ACCY, ANGPOS, ANGV, ANGACC, FUEL, RCSFUEL)
+            TYPE, NAME, MASS, RADIUS, COLORR, COLORG, COLORB, POSX, POSY, VX, VY, ACCX, ACCY, ANGPOS, ANGV, ANGACC, FUEL, RCSFUEL)
             VALUES"""
     for entity in entities:
         fields = """ (
-            %d,   '%s', '%s', %f,   %f,     %d,     %d,     %d,     %f,   %f,   %f, %f, %f,   %f,   %f,     %f,   %f,     %f,   %f),"""
+            '%s', '%s', %f,   %f,     %d,     %d,     %d,     %f,   %f,   %f, %f, %f,   %f,   %f,     %f,   %f,     %f,   %f),"""
 
-        values = (entity.guid,
-                  entity.name,
+        values = (entity.name,
                   entity.mass_fun().asNumber(kg),
                   entity.radius.asNumber(m),
                   entity.color[0],
@@ -156,7 +155,6 @@ def push_entities(entities):
         sql_code += fields % values
     try:
         sql_code = sql_code[:-1] # removes the last ","
-        db_cursor.execute("START TRANSACTION")
         db_cursor.execute("TRUNCATE TABLE flight")
         db_cursor.execute(sql_code)
         db.commit()
@@ -168,21 +166,22 @@ def push_entities(entities):
 def get_entities():
     db_cursor.execute("SELECT * FROM flight")
     sql_object = db_cursor.fetchall()
+    db.commit()
     retrieved_entities = []
     for entity in sql_object:
         # sorry for not being able to access fields in a clearer manner, but here's a conversion list
         # that is true, but everything just comes in the order that the columns are in:
         # TYPE, NAME, MASS, RADIUS, COLORR, COLORG, COLORB, POSX, POSY, VX, VY, ACCX, ACCY, ANGPOS, ANGV, ANGACC,
         # (FUEL, RCSFUEL)
-        if entity[1] == "entity":
+        if entity[0] == "entity":
             retrieved_entities.append(
-                Entity(entity[0], entity[1], entity[2], entity[3], (entity[4], entity[5], entity[6]), [entity[7], entity[8]],
+                Entity(entity[1], entity[2], entity[3], (entity[4], entity[5], entity[6]), [entity[7], entity[8]],
                        [entity[9], entity[10]], [entity[11], entity[12]], entity[13], entity[14], entity[15]))
-        elif entity[1] == "habitat":
+        elif entity[0] == "habitat":
             retrieved_entities.append(
-                Habitat(entity[0], entity[1], entity[2], entity[3], (entity[4], entity[5], entity[6]), [entity[7], entity[8]],
+                Habitat(entity[1], entity[2], entity[3], (entity[4], entity[5], entity[6]), [entity[7], entity[8]],
                         [entity[9], entity[10]], [entity[11], entity[12]], entity[13], entity[14], entity[15],
-                        entity[16]))
+                        entity[16], entity[17]))
     return retrieved_entities
 
 def push_commands(list_of_commands):
@@ -197,6 +196,7 @@ def push_commands(list_of_commands):
             pass
         values += ")"
         db_cursor.execute("INSERT INTO flightcommands(COMMAND, TARGET, AMOUNT) " + values)
+        db.commit()
 
 def pop_commands():
     commands = []
