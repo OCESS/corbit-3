@@ -1,11 +1,8 @@
 import io
-import MySQLdb as msd # msd -> My Sql Db
+import MySQLdb as msd
 import json
-import scipy
-from corbit.objects import Entity, EngineSystem, Habitat
+from corbit.objects import Entity, Habitat
 from unum.units import kg, m, s, rad
-
-__author__ = 'vac'
 
 
 def load_entities(json_object):

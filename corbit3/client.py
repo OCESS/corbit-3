@@ -3,8 +3,8 @@
 __version__ = "3.0.0"
 import corbit.physics
 import corbit.objects
-import corbit.network
 import corbit.mysqlio
+import corbit.network
 import sys  # used to exit the program
 import pygame  # used for drawing and a couple other things
 import pygame.locals as gui  # for things like KB_LEFT
@@ -13,6 +13,7 @@ import unum.units as un
 import scipy
 import numpy.linalg as LA
 import math
+import threading
 
 import pygame.gfxdraw
 print("Corbit PILOT " + __version__)
@@ -147,11 +148,27 @@ def draw(display):
     for text in lines_to_draw:
         line_number = print_text(text, line_number, field_padding, display)
 
+frames_until_update = fps
+ticks_to_render = 0
+def ticker():
+    global frames_until_update
+    global ticks_to_render
+    if (frames_until_update > 0 * un.Hz): frames_until_update -= 1 * un.Hz
+    ticks_to_render += 1
+    threading.Timer(1/fps.asNumber(un.Hz), ticker).start()
+ticker()
+
 while not entities:
     entities = corbit.mysqlio.get_entities()
 while True:
-    while not entities:
-        entities = corbit.mysqlio.get_entities()
+    if frames_until_update == 0 * un.Hz:
+        frames_until_update = fps
+        while not entities:
+            print("got entities")
+            entities = corbit.mysqlio.get_entities()
+
+
+    corbit.simulation.simulate_tick()
 
     # commands_to_send is a : list of (COMMAND, TARGET, AMOUNT) 3-tuples
     # of type                         (string,  string, float)

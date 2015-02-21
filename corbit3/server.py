@@ -5,14 +5,12 @@ import corbit.network
 import corbit.physics
 import corbit.objects
 import corbit.mysqlio
+import corbit.simulation
 import scipy
 import unum.units as un
 import time
-import itertools
 import math
-import socket
 import threading
-import copy
 
 print("Corbit SERVER " + __version__)
 
@@ -78,7 +76,6 @@ def ticker():
     global ticks_to_simulate
     ticks_to_simulate += 1
     threading.Timer(time_per_tick().asNumber(un.s), ticker).start()
-
 ticker()
 
 while True:
@@ -89,26 +86,7 @@ while True:
 
         corbit.mysqlio.push_entities(entities)
 
-        for A, B in itertools.combinations(entities, 2):
-            gravity = corbit.physics.gravitational_force(A, B)
-            theta = corbit.physics.angle(A, B)
-            A.accelerate(gravity, theta)
-            B.accelerate(-gravity, theta)
-
-        collisions = []
-        for A, B in itertools.combinations(entities, 2):
-            affected_objects = corbit.physics.resolve_collision(A, B, time_per_tick())
-            if affected_objects is not None:
-                collisions += affected_objects
-
-        for entity in entities:
-            already_moved = False
-            for name in collisions:
-                if entity.name == name:
-                    already_moved = True
-
-            if not already_moved:
-                entity.move(time_per_tick())
+        corbit.simulation.simulate_tick(time_per_tick(), entities)
 
         ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
         if ticks_to_simulate <= 0:
