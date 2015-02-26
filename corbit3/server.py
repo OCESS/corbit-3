@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 __version__ = "3.0.0"
+import cProfile
 import corbit.network
 import corbit.physics
 import corbit.objects
@@ -18,7 +19,7 @@ entities = []  # This object stores a list of all entities and children of entit
 G = 6.6720E-11 * un.N * un.m ** 2 / un.kg ** 2
 ADDRESS = "localhost"
 time_acc_index = 0
-ticks_per_second = 60 * un.Hz # also see: time_per_tick()
+ticks_per_second = 30 * un.Hz # also see: time_per_tick()
 time_acceleration = [1, 5, 10, 50, 100, 1000, 10000, 100000] # used in time_per_tick()
 
 with open("saves/OCESS.json", "r") as loadfile:
@@ -78,17 +79,17 @@ def ticker():
     threading.Timer(time_per_tick().asNumber(un.s), ticker).start()
 ticker()
 
+def database_backup():
+    global entities
+    corbit.mysqlio.push_entities(entities)
+    threading.Timer(10, database_backup).start()
+database_backup()
+
 while True:
+    start_time = time.time()
+    corbit.simulation.simulate_tick(time_per_tick(), entities)
+    ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
+    print("bam", ticks_to_simulate)
     if ticks_to_simulate <= 0:
-        act_on_piloting_commands(corbit.mysqlio.pop_commands())
-    else:
-        start_time = time.time()
-
-        corbit.mysqlio.push_entities(entities)
-
-        corbit.simulation.simulate_tick(time_per_tick(), entities)
-
-        ticks_to_simulate -= 1  # ticks_to_simulate is incremented in the ticker() function every tick
-        if ticks_to_simulate <= 0:
-            time.sleep(max(time_per_tick().asNumber(un.s) - (time.time() - start_time),
-                           0))
+        time.sleep(max(time_per_tick().asNumber(un.s) - (time.time() - start_time),
+                       0))

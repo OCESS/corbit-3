@@ -12,6 +12,9 @@ def magnitude(vect, unit):
 def distance(A, B):
     return magnitude(A.displacement - B.displacement, m)
 
+def distance2(A, B):
+    return (B.displacement[0] - A.displacement[0])**2 + (B.displacement[1] - A.displacement[1])**2
+
 def speed(A, B):
     return magnitude(A.velocity - B.velocity, m/s)
 
@@ -23,8 +26,10 @@ def angle(A, B):
                  (B.displacement[0] - A.displacement[0]).asNumber())
 
 def gravitational_force(A, B):
-    unit_distance = scipy.array([math.cos(angle(A, B)), math.sin(angle(A, B))])
-    return G * A.mass_fun() * B.mass_fun() / distance(A, B)**2 * unit_distance
+    theta = angle(A, B)
+    unit_distance = scipy.array([math.cos(theta), math.sin(theta)])
+    return G * A.mass_fun() * B.mass_fun() / distance2(A, B) * unit_distance
+    #return N * scipy.array((1,1))
 
 def Vcen(A, B):
     dist = A.displacement - B.displacement

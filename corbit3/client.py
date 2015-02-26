@@ -5,6 +5,7 @@ import corbit.physics
 import corbit.objects
 import corbit.mysqlio
 import corbit.network
+import corbit.simulation
 import sys  # used to exit the program
 import pygame  # used for drawing and a couple other things
 import pygame.locals as gui  # for things like KB_LEFT
@@ -14,10 +15,11 @@ import scipy
 import numpy.linalg as LA
 import math
 import threading
+import time
 
 import pygame.gfxdraw
 print("Corbit PILOT " + __version__)
-fps = 60 * un.Hz
+fps = 30 * un.Hz
 entities = []  # this list will store all the entities
 ADDRESS = "localhost"
 print("alright come over her")
@@ -56,18 +58,17 @@ def draw(display):
         # calculating the on-screen radius
         screen_radius = int(entity.radius.asNumber() * camera.zoom_level)
 
-        #circle_distance = [0, 0]
-        #circle_distance[0] = abs(screen_position[0] - screen_size[0])
-        #circle_distance[1] = abs(screen_position[1] - screen_size[1])
+        circle_distance = [abs(screen_position[0] - screen_size[0]),
+                           abs(screen_position[1] - screen_size[1])]
 
-        #if circle_distance[0] > (screen_size[0]/2 + screen_radius):
-        #    if entity.name == "Earth":
-        #        print("poof")
-        #    continue
-        #if circle_distance[1] > (screen_size[1]/2 + screen_radius):
-        #    if entity.name == "Earth":
-        #        print("poof")
-        #    continue
+        if circle_distance[0] > (screen_size[0]/2 + screen_radius):
+            if entity.name == "Earth":
+                print("poof")
+            continue
+        if circle_distance[1] > (screen_size[1]/2 + screen_radius):
+            if entity.name == "Earth":
+                print("poof")
+            continue
 
         #corner_distance_sq = (circle_distance[0] - screen_size[0]/2)**2 +\
         #(circle_distance[1] - screen_size[1]/2)**2
@@ -148,12 +149,17 @@ def draw(display):
     for text in lines_to_draw:
         line_number = print_text(text, line_number, field_padding, display)
 
-frames_until_update = fps
+frames_until_update = 0 * un.Hz
 ticks_to_render = 0
 def ticker():
     global frames_until_update
     global ticks_to_render
+    global entities
     if (frames_until_update > 0 * un.Hz): frames_until_update -= 1 * un.Hz
+    if frames_until_update == 0 * un.Hz:
+        print("got entities")
+        entities = corbit.mysqlio.get_entities()
+        frames_until_update = fps
     ticks_to_render += 1
     threading.Timer(1/fps.asNumber(un.Hz), ticker).start()
 ticker()
@@ -161,18 +167,16 @@ ticker()
 while not entities:
     entities = corbit.mysqlio.get_entities()
 while True:
-    if frames_until_update == 0 * un.Hz:
-        frames_until_update = fps
-        while not entities:
-            print("got entities")
-            entities = corbit.mysqlio.get_entities()
+    if ticks_to_render <= 0:
+        time.sleep(0.01)
+        continue
+    ticks_to_render -= 1
 
-
-    corbit.simulation.simulate_tick()
+    corbit.simulation.simulate_tick(1/fps, entities)
 
     # commands_to_send is a : list of (COMMAND, TARGET, AMOUNT) 3-tuples
     # of type                         (string,  string, float)
-    # whenever a command is appended, that command is written to the corbit.flightcommands table
+    # whenever a command is appended, that command is written to the corbit.flightcommands mysql table
     # where the server checks for a command and acts on it
     commands_to_send = []
 
@@ -237,6 +241,8 @@ while True:
     draw(screen)
     pygame.display.flip()
     screen.fill((0, 0, 0))
+
+    print("showed", ticks_to_render)
 
     # time.sleep(1/fps.asNumber(Hz))
     # time.sleep(1/fps.asNumber(Hz) - time_spent_on_last_frame)

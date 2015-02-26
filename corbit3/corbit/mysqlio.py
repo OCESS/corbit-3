@@ -95,8 +95,14 @@ db_cursor = None
 db = None
 def flush_db(entities, db_info):
     global db
-    db = msd.connect(*db_info)
     global db_cursor
+    try:
+        db = msd.connect(*db_info)
+    except: # corbit database doesn't exist yet, make it
+        db = msd.connect(*db_info[:-1])
+        db_cursor = db.cursor()
+        db_cursor.execute("CREATE DATABASE corbit")
+        db_cursor.execute("USE corbit")
     db_cursor = db.cursor()
     # TODO: in the future, if you want to implement a "restore previous state" option, like what orbit has right now,
     # you can just not run this function, and then and then load whatever is in

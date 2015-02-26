@@ -2,10 +2,15 @@
 ## Corbit
 ################
 
-# auto-generated
-res/client.json
-.project
-.pydevproject
+# virtualenv stuff
+corbit3/pip-selfcheck.json
+corbit3/lib
+corbit3/include
+corbit3/bin
+
+# python stuff
+corbit3/__pycache__
+corbit3/.idea
 .idea
 
 

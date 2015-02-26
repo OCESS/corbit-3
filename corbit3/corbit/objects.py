@@ -336,7 +336,3 @@ def json_serialize(entities, output_stream=None, pretty=False, json_sort_keys=Fa
     else:
         return json.dump(json_data, output_stream,
                          indent=json_indent, sort_keys=json_sort_keys, separators=json_separators)
-
-
-
-
