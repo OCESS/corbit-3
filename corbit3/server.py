@@ -20,7 +20,7 @@ entities = []  # This object stores a list of all entities and children of entit
 G = 6.6720E-11 * un.N * un.m ** 2 / un.kg ** 2
 ADDRESS = "localhost"
 time_acc_index = 0
-ticks_per_second = 60 * un.Hz # also see: time_per_tick()
+ticks_per_second = 30 * un.Hz # also see: time_per_tick()
 time_acceleration = [1, 5, 10, 50, 100, 1000, 10000, 100000] # used in time_per_tick()
 
 with open("saves/OCESS.json", "r") as loadfile:

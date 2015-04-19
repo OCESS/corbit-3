@@ -98,9 +98,16 @@ db_cursor = None
 db = None
 def flush_db(entities, db_info):
     global db
-    db = msd.connect(*db_info)
     global db_cursor
-    db_cursor = db.cursor()
+    try:
+        print(db_info)
+        db = msd.connect(*db_info)
+        db_cursor = db.cursor()
+    except:
+        db = msd.connect(*(db_info[:-1]))
+        db_cursor = db.cursor()
+        db_cursor.execute("CREATE DATABASE corbit")
+        db_cursor.execute("USE corbit")
     # TODO: in the future, if you want to implement a "restore previous state" option, like what orbit has right now,
     # you can just not run this function, and then and then load whatever is in
     db_cursor.execute("DROP TABLE IF EXISTS flight")

@@ -2,73 +2,92 @@ from unum.units import m, s, N, kg
 import copy
 import scipy
 import scipy.linalg
+import scipy.spatial
 import math
-G = 6.673*10**-11 * N * (m/kg)**2
+
+G = 6.673 * 10 ** -11 * N * (m / kg) ** 2
+
 
 def magnitude(vect, unit):
     # shorthand to work around scipy not working with units
     return unit * scipy.linalg.norm(vect.asNumber(unit))
 
+
 def distance(A, B):
-    return magnitude(A.displacement - B.displacement, m)
+    return m * scipy.spatial.distance.cdist([A.displacement.asNumber(m)],
+                                            [B.displacement.asNumber(m)])[0][0]
+
 
 def speed(A, B):
-    return magnitude(A.velocity - B.velocity, m/s)
+    return magnitude(A.velocity - B.velocity, m / s)
+
 
 def altitude(A, B):
     return distance(A, B) - A.radius - B.radius
 
+
 def angle(A, B):
     return math.atan2((B.displacement[1] - A.displacement[1]).asNumber(),
-                 (B.displacement[0] - A.displacement[0]).asNumber())
+                      (B.displacement[0] - A.displacement[0]).asNumber())
+
 
 def gravitational_force(A, B):
     unit_distance = scipy.array([math.cos(angle(A, B)), math.sin(angle(A, B))])
-    return G * A.mass_fun() * B.mass_fun() / distance(A, B)**2 * unit_distance
+    return G * A.mass_fun() * B.mass_fun() / distance(A, B) ** 2 * unit_distance
+
 
 def Vcen(A, B):
     dist = A.displacement - B.displacement
     # the math here: (unit normal vector) * (velocity)
-    return scipy.dot(dist/magnitude(dist, m), A.velocity - B.velocity)
+    return scipy.dot(dist / magnitude(dist, m), A.velocity - B.velocity)
+
 
 def Vtan(A, B):
     dist = A.displacement - B.displacement
     # the math here is similar to Vcen
     dist = dist.asNumber(m)
     dist_tan = scipy.array((-dist[1], dist[0]))
-    return m/s * scipy.dot(dist_tan/scipy.linalg.norm(dist_tan), (A.velocity - B.velocity).asNumber(m/s))
+    return m / s * scipy.dot(dist_tan / scipy.linalg.norm(dist_tan), (A.velocity - B.velocity).asNumber(m / s))
+
 
 def Vorbit(A, B):
-    return m/s * math.sqrt(((B.mass_fun()**2 * G) / ((A.mass_fun() + B.mass_fun()) * distance(A, B))).asNumber(m**2/s/s))
+    return m / s * math.sqrt(
+        ((B.mass_fun() ** 2 * G) / ((A.mass_fun() + B.mass_fun()) * distance(A, B))).asNumber(m ** 2 / s / s))
+
 
 def semimajor_axis(A, B):
-    mu = G * (A.mass_fun() + B.mass_fun())    # G(m + M)
-    E = (magnitude(A.velocity - B.velocity, m/s)**2/2) - mu/magnitude(A.displacement - B.displacement, m)
-    return -mu/2/E  # -mu/2E
+    mu = G * (A.mass_fun() + B.mass_fun())  # G(m + M)
+    E = (magnitude(A.velocity - B.velocity, m / s) ** 2 / 2) - mu / magnitude(A.displacement - B.displacement, m)
+    return -mu / 2 / E  # -mu/2E
+
 
 def ecc(A, B):
     # this is all from the wikipedia orbital eccentricity page, btw: http://en.wikipedia.org/wiki/Orbital_eccentricity
-    mu = G * (A.mass_fun() + B.mass_fun())    # G(m + M)
-    E = -mu/2/semimajor_axis(A, B)  # -mu/2a
-    h = (distance(A, B) * Vtan(A, B))    # r * Vtan
-    return math.sqrt(1+(2*E*h**2)/(mu**2))    # sqrt(1 + (2Eh^2)/(mu^2))
+    mu = G * (A.mass_fun() + B.mass_fun())  # G(m + M)
+    E = -mu / 2 / semimajor_axis(A, B)  # -mu/2a
+    h = (distance(A, B) * Vtan(A, B))  # r * Vtan
+    return math.sqrt(1 + (2 * E * h ** 2) / (mu ** 2))  # sqrt(1 + (2Eh^2)/(mu^2))
+
 
 def periapsis(A, B):
     peri = (1 - ecc(A, B)) * semimajor_axis(A, B)
     if peri <= A.radius + B.radius:
-        return 0*m
+        return 0 * m
     else:
         return peri
+
 
 def apoapsis(A, B):
     apo = (1 + ecc(A, B)) * semimajor_axis(A, B)
     if apo <= A.radius + B.radius:
-        return 0*m
+        return 0 * m
     else:
         return apo
 
+
 def stopping_acc(A, B):
-    return 200 #TODO
+    return 200  # TODO
+
 
 def resolve_collision(A, B, time):
     """Detects and acts upon any collisions in the specified time interval between two entities
@@ -96,13 +115,13 @@ def resolve_collision(A, B, time):
     # this code finds when the the two entities will collide. See
     # http://www.gvu.gatech.edu/people/official/jarek/graphics/material/collisionsDeshpandeKharsikarPrabhu.pdf
     # for how I got the algorithm
-    a = magnitude(velocity, m/s)**2
-    b = m**2/s * 2*scipy.dot(displacement.asNumber(m), velocity.asNumber(m/s))
-    c = magnitude(displacement, m)**2 - radius_sum**2
+    a = magnitude(velocity, m / s) ** 2
+    b = m ** 2 / s * 2 * scipy.dot(displacement.asNumber(m), velocity.asNumber(m / s))
+    c = magnitude(displacement, m) ** 2 - radius_sum ** 2
 
     try:
         t_to_impact = \
-            (-b - m**2/s * math.sqrt((b**2 - 4*a*c).asNumber(m**4/s**2))) / (2 * a)
+            (-b - m ** 2 / s * math.sqrt((b ** 2 - 4 * a * c).asNumber(m ** 4 / s ** 2))) / (2 * a)
     except:
         return
 
@@ -122,7 +141,7 @@ def resolve_collision(A, B, time):
     n = displacement  # normal vector
     un = n / magnitude(n, m)  # normal unit vector
     unt = copy.deepcopy(un)  # normal tangent vector
-    unt[0], unt[1] = -unt[1], unt[0]    # ofc the tangent is orthogonal to the normal
+    unt[0], unt[1] = -unt[1], unt[0]  # ofc the tangent is orthogonal to the normal
 
     # A's centripetal velocity
     vAn = m / s * scipy.dot(un.asNumber(), A.velocity.asNumber(m / s))
