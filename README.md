@@ -10,19 +10,25 @@ How do I fly this thing?
 
 Python distribution is hard. so for development do this in the same directory as this README.md:
 
-  virtualenv corbit3
-  cd corbit3
-  source bin/activate
-  pip3 install unum
-  cp unumpatch/__init__.py lib/python3.4/site-packages/unum/units/__init__.py # because I don’t think the creator has pushed the “__cmp__ doesn’t work in python3” patch yet
-  pip3 install hg+http://bitbucket.org/pygame/pygame
-  pip3 install numpy
-  pip3 install scipy
-  pip3 install mysqlclient
+    virtualenv corbit3
+    cd corbit3
+    source bin/activate
+    pip3 install unum
+    cp unumpatch/__init__.py lib/python3.4/site-packages/unum/units/__init__.py # because I don’t think the creator has pushed the “__cmp__ doesn’t work in python3” patch yet
+    pip3 install hg+http://bitbucket.org/pygame/pygame
+    pip3 install numpy
+    pip3 install scipy
+    pip3 install mysqlclient
 
 then from here you have to run “source corbit3/bin/activate” do get your virtualenv for development back again.
 If you don’t want a virtualenv (useful to have exactly the right versions of libraries you need and not conflict with other projects on your system)
 then you can leave out the first three lines.
+
+To run:
+
+    cd corbit3
+    python3 server.py
+    python3 client.py
 
 Project Structure
 -----------------
