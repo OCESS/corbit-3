@@ -5,6 +5,8 @@ import scipy.linalg
 import scipy.spatial
 import math
 
+
+scipy.seterr(divide="raise", invalid="raise")
 G = 6.673 * 10 ** -11 * N * (m / kg) ** 2
 
 
@@ -21,6 +23,9 @@ def distance(A, B):
 def speed(A, B):
     return magnitude(A.velocity - B.velocity, m / s)
 
+def velocity(A, B):
+    return A.velocity - B.velocity
+
 
 def altitude(A, B):
     return distance(A, B) - A.radius - B.radius
@@ -33,13 +38,13 @@ def angle(A, B):
 
 def gravitational_force(A, B):
     unit_distance = scipy.array([math.cos(angle(A, B)), math.sin(angle(A, B))])
-    return G * A.mass_fun() * B.mass_fun() / distance(A, B) ** 2 * unit_distance
+    return G * A.mass() * B.mass() / distance(A, B) ** 2 * unit_distance
 
 
 def Vcen(A, B):
     dist = A.displacement - B.displacement
     # the math here: (unit normal vector) * (velocity)
-    return scipy.dot(dist / magnitude(dist, m), A.velocity - B.velocity)
+    return scipy.dot(dist / magnitude(dist, m), velocity(A, B))
 
 
 def Vtan(A, B):
@@ -47,23 +52,23 @@ def Vtan(A, B):
     # the math here is similar to Vcen
     dist = dist.asNumber(m)
     dist_tan = scipy.array((-dist[1], dist[0]))
-    return m / s * scipy.dot(dist_tan / scipy.linalg.norm(dist_tan), (A.velocity - B.velocity).asNumber(m / s))
+    return m / s * scipy.dot(dist_tan / scipy.linalg.norm(dist_tan), velocity(A, B).asNumber(m / s))
 
 
 def Vorbit(A, B):
     return m / s * math.sqrt(
-        ((B.mass_fun() ** 2 * G) / ((A.mass_fun() + B.mass_fun()) * distance(A, B))).asNumber(m ** 2 / s / s))
+        ((B.mass() ** 2 * G) / ((A.mass() + B.mass()) * distance(A, B))).asNumber(m ** 2 / s / s))
 
 
 def semimajor_axis(A, B):
-    mu = G * (A.mass_fun() + B.mass_fun())  # G(m + M)
-    E = (magnitude(A.velocity - B.velocity, m / s) ** 2 / 2) - mu / magnitude(A.displacement - B.displacement, m)
+    mu = G * (A.mass() + B.mass())  # G(m + M)
+    E = (speed(A, B) ** 2 / 2) - mu / magnitude(A.displacement - B.displacement, m)
     return -mu / 2 / E  # -mu/2E
 
 
 def ecc(A, B):
     # this is all from the wikipedia orbital eccentricity page, btw: http://en.wikipedia.org/wiki/Orbital_eccentricity
-    mu = G * (A.mass_fun() + B.mass_fun())  # G(m + M)
+    mu = G * (A.mass() + B.mass())  # G(m + M)
     E = -mu / 2 / semimajor_axis(A, B)  # -mu/2a
     h = (distance(A, B) * Vtan(A, B))  # r * Vtan
     return math.sqrt(1 + (2 * E * h ** 2) / (mu ** 2))  # sqrt(1 + (2Eh^2)/(mu^2))
@@ -86,7 +91,7 @@ def apoapsis(A, B):
 
 
 def stopping_acc(A, B):
-    return 200  # TODO
+    return (G * B.mass() /(distance(A, B)**2) + speed(A, B)**2/(2*distance(A, B))).asUnit(m/s/s)
 
 
 def resolve_collision(A, B, time):
@@ -102,8 +107,6 @@ def resolve_collision(A, B, time):
     # 2.1 represent velocities as normal velocity and tangential velocity
     # 2.2 do a 1D collision using the normal veloctiy
     # 2.3 add the normal and tangential velocities to get the new velocity
-
-    scipy.seterr(divide="raise", invalid="raise")
 
     # for this function I make one of the objects the frame of reference
     # which means my calculations are much simplified
@@ -161,12 +164,12 @@ def resolve_collision(A, B, time):
     R = 0.1
 
     vAn_ = \
-        (A.mass_fun() * vAn + B.mass_fun() * vBn + R * B.mass_fun() * (B.velocity - A.velocity)) / \
-        (A.mass_fun() + B.mass_fun())
+        (A.mass() * vAn + B.mass() * vBn + R * B.mass() * (B.velocity - A.velocity)) / \
+        (A.mass() + B.mass())
 
     vBn_ = \
-        (A.mass_fun() * vAn + B.mass_fun() * vBn + R * A.mass_fun() * (A.velocity - B.velocity)) / \
-        (A.mass_fun() + B.mass_fun())
+        (A.mass() * vAn + B.mass() * vBn + R * A.mass() * (A.velocity - B.velocity)) / \
+        (A.mass() + B.mass())
 
     # convert scalar normal and tangent velocities to vector quantities
     VAn = vAn_ * un

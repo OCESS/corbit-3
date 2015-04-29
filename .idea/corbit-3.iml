@@ -4,7 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/corbit3/pygame" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.4.1 (/usr/bin/python3.4)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.4.2 virtualenv at ~/projects/corbit-3/corbit3" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="corbit3" />
   </component>

@@ -124,7 +124,7 @@ def draw(display):
            LA.norm((corbit.objects.find_entity(corbit.objects.control, entities).acceleration -
                     corbit.physics.gravitational_force(corbit.objects.find_entity(corbit.objects.control, entities),
                                                        corbit.objects.find_entity(corbit.objects.reference, entities))
-                    / corbit.objects.find_entity(corbit.objects.control, entities).mass_fun()).asNumber(
+                    / corbit.objects.find_entity(corbit.objects.control, entities).mass()).asNumber(
                un.m / un.s / un.s))).__str__()),
          ("Rotation:",
           corbit.objects.find_entity(corbit.objects.control, entities).angular_speed.__str__()),
@@ -140,6 +140,10 @@ def draw(display):
          ("Apoapsis:",
           corbit.physics.apoapsis(corbit.objects.find_entity(corbit.objects.control, entities),
                                   corbit.objects.find_entity(corbit.objects.reference, entities)).__str__()),
+         ("", ""),
+         ("Stopping Acc:",
+         corbit.physics.stopping_acc(corbit.objects.find_entity(corbit.objects.control, entities),
+                                     corbit.objects.find_entity(corbit.objects.reference, entities)).__str__()),
          ("", ""),
          ("Fuel:",
           corbit.objects.find_entity(corbit.objects.control, entities).engine_system.fuel.__str__()),

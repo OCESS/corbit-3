@@ -139,7 +139,7 @@ def push_entities(entities):
             '%s', '%s', %f,   %f,     %d,     %d,     %d,     %f,   %f,   %f, %f, %f,   %f,   %f,     %f,   %f,     %f,   %f),"""
 
         values = (entity.name,
-                  entity.mass_fun().asNumber(kg),
+                  entity.mass().asNumber(kg),
                   entity.radius.asNumber(m),
                   entity.color[0],
                   entity.color[1],

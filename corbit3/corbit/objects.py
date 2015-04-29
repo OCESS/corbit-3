@@ -97,13 +97,13 @@ class Entity:
         assert isinstance(angular_acceleration, (int, float)), angular_acceleration.__str__() + " is not a float"
         self.angular_acceleration = angular_acceleration * rad/s/s
 
-    def mass_fun(self):
+    def mass(self):
         """Getter function for mass, will be overriden in Entity-derived classes"""
         return self.dry_mass
 
     def moment_of_inertia(self):
         """Returns the entity's moment of inertia, which is that of a sphere"""
-        return (2 * self.mass_fun() * self.radius ** 2) / 5
+        return (2 * self.mass() * self.radius ** 2) / 5
 
     def accelerate(self, force, angle):
         """
@@ -130,7 +130,7 @@ class Entity:
         # a is linear acceleration, m is mass of entity
         # F is the force that is used in making linear acceleration
         F_cen = force * abs(math.cos(angle - F_theta))
-        self.acceleration += F_cen / self.mass_fun()
+        self.acceleration += F_cen / self.mass()
         # if LA.norm(F_cen.asNumber()) != 0:
         # print(F_cen)
 
@@ -165,7 +165,7 @@ class Entity:
         return {
             "name": self.name,
             "color": self.color,
-            "mass": self.mass_fun().asNumber(),
+            "mass": self.mass().asNumber(),
             "radius": self.radius.asNumber(),
             "displacement": self.displacement.asNumber().tolist(),
             "velocity": self.velocity.asNumber().tolist(),
@@ -252,7 +252,7 @@ class Habitat(Entity):
                                         [3.14, [1,0]],
                                         [4.71, [0,1]]])
 
-    def mass_fun(self):
+    def mass(self):
         fuel_mass = self.engine_system.fuel + self.rcs_system.fuel
         return self.dry_mass + fuel_mass
 
