@@ -20,7 +20,7 @@ Python distribution is hard. so for development do this in the same directory as
     pip3 install scipy
     pip3 install mysqlclient
 
-then from here you have to run “source corbit3/bin/activate” do get your virtualenv for development back again.
+then from here you have to run `source corbit3/bin/activate` do get your virtualenv for development back again.
 If you don’t want a virtualenv (useful to have exactly the right versions of libraries you need and not conflict with other projects on your system)
 then you can leave out the first three lines.
 
